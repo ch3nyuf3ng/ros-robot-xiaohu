@@ -16,8 +16,8 @@ struct ManipulatorControl {
 };
 
 struct ArmControl final: public ManipulatorControl {
-    const Measurement<UnitLength> lift_height;
-    const Measurement<UnitSpeed> lift_speed;
+    Measurement<UnitLength> const lift_height;
+    Measurement<UnitSpeed> const lift_speed;
 
     ArmControl(Measurement<UnitLength> const& lift_height, Measurement<UnitSpeed> const& lift_speed = 50_cmPs);
 
@@ -25,12 +25,12 @@ struct ArmControl final: public ManipulatorControl {
 };
 
 struct GripperControl final: public ManipulatorControl {
-    const Measurement<UnitLength> gripper_finger_gap;
-    const Measurement<UnitAngularSpeed> gripper_move_speed;
+    Measurement<UnitLength> const gripper_finger_gap;
+    Measurement<UnitAngularSpeed> const gripper_move_speed;
 
     GripperControl(
-        const Measurement<UnitLength>& gripper_finger_gap,
-        const Measurement<UnitAngularSpeed> gripper_move_speed = 5_degPs
+        Measurement<UnitLength> const& gripper_finger_gap,
+        Measurement<UnitAngularSpeed> const& gripper_move_speed = 5_degPs
     );
 
     sensor_msgs::JointState to_message() const override;

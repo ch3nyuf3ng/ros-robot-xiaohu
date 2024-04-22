@@ -15,7 +15,7 @@ sensor_msgs::JointState ManipulatorControl::create_message(size_t control_part_q
 }
 
 /* struct ArmControl */
-ArmControl::ArmControl(const Measurement<UnitLength>& lift_height, const Measurement<UnitSpeed>& lift_speed):
+ArmControl::ArmControl(Measurement<UnitLength> const& lift_height, Measurement<UnitSpeed> const& lift_speed):
     lift_height{lift_height}, lift_speed{lift_speed} {}
 
 sensor_msgs::JointState ArmControl::to_message() const {
@@ -29,7 +29,7 @@ sensor_msgs::JointState ArmControl::to_message() const {
 }
 
 GripperControl::GripperControl(
-    const Measurement<UnitLength>& gripper_finger_gap, const Measurement<UnitAngularSpeed> gripper_move_speed
+    Measurement<UnitLength> const& gripper_finger_gap, Measurement<UnitAngularSpeed> const& gripper_move_speed
 ): gripper_finger_gap{gripper_finger_gap}, gripper_move_speed{gripper_move_speed} {}
 
 sensor_msgs::JointState GripperControl::to_message() const {

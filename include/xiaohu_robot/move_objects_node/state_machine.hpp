@@ -61,17 +61,17 @@ private:
     TaskState task_state;
     node_handle_t node_handle;
     move_task_queue move_tasks;
-    const std::string base_name;
-    const ros::Publisher velocity_publisher;
-    const ros::Publisher behaviors_publisher;
-    const ros::Publisher waypoint_publisher;
-    const ros::Publisher grab_object_publisher;
-    const ros::Publisher manipulatior_control_publisher;
-    const ros::Subscriber object_coordinate_subscriber;
-    const ros::Subscriber navigation_result_subscriber;
-    const ros::Subscriber grab_result_subscriber;
-    const ros::Subscriber move_task_subscriber;
-    const ros::Subscriber cancellation_subscriber;
+    std::string const base_name;
+    ros::Publisher const velocity_publisher;
+    ros::Publisher const behaviors_publisher;
+    ros::Publisher const waypoint_publisher;
+    ros::Publisher const grab_object_publisher;
+    ros::Publisher const manipulatior_control_publisher;
+    ros::Subscriber const object_coordinate_subscriber;
+    ros::Subscriber const navigation_result_subscriber;
+    ros::Subscriber const grab_result_subscriber;
+    ros::Subscriber const move_task_subscriber;
+    ros::Subscriber const cancellation_subscriber;
     static constexpr double loops_per_second{10};
 
     MoveTask get_current_move_task() const;
