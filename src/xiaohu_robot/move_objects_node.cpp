@@ -1,4 +1,4 @@
-#include "xiaohu/move_objects_node/state_machine.hpp"
+#include "xiaohu_robot/move_objects_node/state_machine.hpp"
 #include "ros/init.h"
 
 using namespace xiaohu_robot;

@@ -10,9 +10,9 @@
 #include "sensor_msgs/JointState.h"
 #include "std_msgs/String.h"
 #include "wpb_home_behaviors/Coord.h"
-#include "xiaohu/MoveTaskMsg.h"
-#include "xiaohu/foundation/manipulator_control.hpp"
-#include "xiaohu/foundation/measurement.hpp"
+#include "xiaohu_robot/MoveTaskMsg.h"
+#include "xiaohu_robot/foundation/manipulator_control.hpp"
+#include "xiaohu_robot/foundation/measurement.hpp"
 #include <cstddef>
 #include <deque>
 #include <string>
@@ -46,7 +46,7 @@ private:
     };
 
     using string_msg_ptr = std_msgs::String::ConstPtr const&;
-    using move_task_msg_ptr = xiaohu::MoveTaskMsg::ConstPtr const&;
+    using move_task_msg_ptr = xiaohu_robot::MoveTaskMsg::ConstPtr const&;
     using coordinates_msg_ptr = wpb_home_behaviors::CoordConstPtr const&;
     using velocity_msg = geometry_msgs::Twist;
     using string_msg = std_msgs::String;

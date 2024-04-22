@@ -4,7 +4,7 @@
 #define XIAOHU_ROBOT_MANIPULATOR_CONTROL_HPP
 
 #include "sensor_msgs/JointState.h"
-#include "xiaohu/foundation/measurement.hpp"
+#include "xiaohu_robot/foundation/measurement.hpp"
 
 namespace xiaohu_robot {
 inline namespace foundation {

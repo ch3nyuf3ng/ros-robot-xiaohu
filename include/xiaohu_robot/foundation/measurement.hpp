@@ -2,7 +2,7 @@
 
 #ifndef XIAOHU_ROBOT_FOUNDATION_MEASUREMENT_HPP
 #define XIAOHU_ROBOT_FOUNDATION_MEASUREMENT_HPP
-#include "xiaohu/foundation/common_interfaces.hpp"
+#include "xiaohu_robot/foundation/common_interfaces.hpp"
 #include <istream>
 #include <memory>
 #include <sstream>

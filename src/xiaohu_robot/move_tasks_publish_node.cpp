@@ -1,9 +1,9 @@
 #include "ros/init.h"
 #include "ros/node_handle.h"
 #include "ros/rate.h"
-#include "xiaohu/MoveTaskMsg.h"
+#include "xiaohu_robot/MoveTaskMsg.h"
 
-using xiaohu::MoveTaskMsg;
+using xiaohu_robot::MoveTaskMsg;
 
 int main(int argc, char* argv[]) {
     ros::init(argc, argv, "publish_move_tasks");

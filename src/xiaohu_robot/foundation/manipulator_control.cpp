@@ -1,4 +1,4 @@
-#include "xiaohu/foundation/manipulator_control.hpp"
+#include "xiaohu_robot/foundation/manipulator_control.hpp"
 
 using namespace xiaohu_robot;
 

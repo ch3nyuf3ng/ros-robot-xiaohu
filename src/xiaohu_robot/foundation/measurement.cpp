@@ -1,4 +1,4 @@
-#include "xiaohu/foundation/measurement.hpp"
+#include "xiaohu_robot/foundation/measurement.hpp"
 
 using namespace xiaohu_robot;
 using std::shared_ptr;
