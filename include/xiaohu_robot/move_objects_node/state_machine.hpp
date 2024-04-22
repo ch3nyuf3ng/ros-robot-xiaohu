@@ -76,7 +76,7 @@ private:
 
     MoveTask get_current_move_task() const;
     TaskState get_current_task_state() const;
-    Measurement<UnitDuration> get_timing() const;
+    duration get_timing() const;
     void set_next_task_state(TaskState next_state);
     void increment_timing();
     void reset_timing();
