@@ -19,10 +19,7 @@ struct ArmControl final: public ManipulatorControl {
     const Measurement<UnitLength> lift_height;
     const Measurement<UnitSpeed> lift_speed;
 
-    ArmControl(
-        Measurement<UnitLength> const& lift_height,
-        Measurement<UnitSpeed> const& lift_speed = 50_cmPs
-    );
+    ArmControl(Measurement<UnitLength> const& lift_height, Measurement<UnitSpeed> const& lift_speed = 50_cmPs);
 
     sensor_msgs::JointState to_message() const override;
 };

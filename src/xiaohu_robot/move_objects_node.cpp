@@ -1,5 +1,5 @@
-#include "xiaohu_robot/move_objects_node/state_machine.hpp"
 #include "ros/init.h"
+#include "xiaohu_robot/move_objects_node/state_machine.hpp"
 
 using namespace xiaohu_robot;
 

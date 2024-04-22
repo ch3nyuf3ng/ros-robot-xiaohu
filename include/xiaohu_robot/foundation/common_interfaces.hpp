@@ -18,7 +18,6 @@ public:
     virtual ~Printable() = default;
     virtual std::string to_string() const = 0;
 };
-}
-}
-
+}  // namespace foundation
+}  // namespace xiaohu_robot
 #endif

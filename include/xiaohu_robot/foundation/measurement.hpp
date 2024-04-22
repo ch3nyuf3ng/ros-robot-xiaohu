@@ -112,9 +112,7 @@ public:
         }
     }
 
-    std::string to_string() const override final {
-        return symbol;
-    }
+    std::string to_string() const override final { return symbol; }
 };
 
 template<typename UnitType, typename = std::enable_if_t<std::is_base_of<Unit, UnitType>::value>>

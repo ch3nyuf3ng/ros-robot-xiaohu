@@ -3,8 +3,7 @@
 using namespace xiaohu_robot;
 
 /* struct ManipulatorControl */
-sensor_msgs::JointState
-ManipulatorControl::create_message(size_t control_part_quantity) {
+sensor_msgs::JointState ManipulatorControl::create_message(size_t control_part_quantity) {
     sensor_msgs::JointState message{};
 
     message.effort.resize(control_part_quantity);
@@ -16,10 +15,8 @@ ManipulatorControl::create_message(size_t control_part_quantity) {
 }
 
 /* struct ArmControl */
-ArmControl::ArmControl(
-    const Measurement<UnitLength>& lift_height,
-    const Measurement<UnitSpeed>& lift_speed
-): lift_height{lift_height}, lift_speed{lift_speed} {}
+ArmControl::ArmControl(const Measurement<UnitLength>& lift_height, const Measurement<UnitSpeed>& lift_speed):
+    lift_height{lift_height}, lift_speed{lift_speed} {}
 
 sensor_msgs::JointState ArmControl::to_message() const {
     sensor_msgs::JointState arm_control_message{create_message(1)};
@@ -32,11 +29,8 @@ sensor_msgs::JointState ArmControl::to_message() const {
 }
 
 GripperControl::GripperControl(
-    const Measurement<UnitLength>& gripper_finger_gap,
-    const Measurement<UnitAngularSpeed> gripper_move_speed
-):
-    gripper_finger_gap{gripper_finger_gap},
-    gripper_move_speed{gripper_move_speed} {}
+    const Measurement<UnitLength>& gripper_finger_gap, const Measurement<UnitAngularSpeed> gripper_move_speed
+): gripper_finger_gap{gripper_finger_gap}, gripper_move_speed{gripper_move_speed} {}
 
 sensor_msgs::JointState GripperControl::to_message() const {
     sensor_msgs::JointState arm_control_message{create_message(1)};
