@@ -2,7 +2,7 @@
 
 using namespace xiaohu_robot::move_objects_node;
 
-StateMachine::StateMachine(std::string base_name):
+StateMachine::StateMachine(string base_name):
     node_handle{}, timing{0_s}, task_state{TaskState::READY}, move_tasks{}, base_name{std::move(base_name)},
     velocity_publisher{node_handle.advertise<velocity_msg>("/cmd_vel", 10)},
     behaviors_publisher{node_handle.advertise<string_msg>("/wpb_home/behaviors", 10)},
@@ -241,7 +241,7 @@ void StateMachine::notify_change_robot_behavior(Behavior behavior) {
     behaviors_publisher.publish(create_behavior_message(behavior));
 }
 
-void StateMachine::notify_navigate_robot(std::string waypoint_name) {
+void StateMachine::notify_navigate_robot(string waypoint_name) {
     waypoint_publisher.publish(create_waypoint_message(std::move(waypoint_name)));
 }
 
@@ -261,7 +261,7 @@ StateMachine::velocity_msg StateMachine::create_velocity_command(double axis_x_l
     return velocity_command;
 }
 
-StateMachine::string_msg StateMachine::create_waypoint_message(std::string waypoint_name) {
+StateMachine::string_msg StateMachine::create_waypoint_message(string waypoint_name) {
     string_msg message{};
     message.data = std::move(waypoint_name);
     return message;

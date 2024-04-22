@@ -61,7 +61,7 @@ private:
     TaskState task_state;
     node_handle_t node_handle;
     move_task_queue move_tasks;
-    std::string const base_name;
+    string const base_name;
     ros::Publisher const velocity_publisher;
     ros::Publisher const behaviors_publisher;
     ros::Publisher const waypoint_publisher;
@@ -101,7 +101,7 @@ private:
     void notify_grab_object(coordinates_msg_ptr coordinates_ptr, size_t index);
 
     static velocity_msg create_velocity_command(double axis_x_linear_speed);
-    static string_msg create_waypoint_message(std::string waypoint_name);
+    static string_msg create_waypoint_message(string waypoint_name);
     static string_msg create_behavior_message(Behavior behavior);
     static position_msg create_position_message(double x, double y, double z);
     static void display_detected_objects(coordinates_msg_ptr coordinates_ptr);
