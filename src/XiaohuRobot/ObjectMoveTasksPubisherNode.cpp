@@ -1,15 +1,16 @@
+#include "XiaohuRobot/Configs.hpp"
+#include "XiaohuRobot/MoveTaskMsg.h"
 #include "ros/init.h"
 #include "ros/node_handle.h"
 #include "ros/rate.h"
-#include "xiaohu_robot/MoveTaskMsg.h"
 
-using xiaohu_robot::MoveTaskMsg;
+using namespace XiaohuRobot;
 
 int main(int argc, char* argv[]) {
     ros::init(argc, argv, "publish_move_tasks");
     ros::NodeHandle n;
-    auto publisher{n.advertise<MoveTaskMsg>("/xiaohu/move_tasks", 1000)};
-    auto loop_rate{ros::Rate(10)};
+    auto publisher{n.advertise<MoveTaskMsg>(Configs::objectMovingTasksTopic, Configs::messageBufferSize)};
+    auto loopRate{ros::Rate(Configs::stateCheckingFrequency)};
     std::cout << "Input:" << std::endl;
     while (ros::ok()) {
         std::string from_place, to_place;
@@ -19,7 +20,7 @@ int main(int argc, char* argv[]) {
         msg.drop_place_name = to_place;
         publisher.publish(msg);
         ros::spinOnce();
-        loop_rate.sleep();
+        loopRate.sleep();
     }
     return 0;
 }

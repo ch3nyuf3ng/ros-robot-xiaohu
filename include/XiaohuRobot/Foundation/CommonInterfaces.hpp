@@ -5,8 +5,8 @@
 
 #include <string>
 
-namespace xiaohu_robot {
-inline namespace foundation {
+namespace XiaohuRobot {
+inline namespace Foundation {
 template<typename T> class Equatable {
 public:
     virtual ~Equatable() = default;
@@ -16,7 +16,7 @@ public:
 class Printable {
 public:
     virtual ~Printable() = default;
-    virtual std::string to_string() const = 0;
+    virtual std::string toString() const = 0;
 };
 }  // namespace foundation
 }  // namespace xiaohu_robot
