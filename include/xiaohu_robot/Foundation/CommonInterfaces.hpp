@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace XiaohuRobot {
+namespace xiaohu_robot {
 inline namespace Foundation {
 template<typename T> class Equatable {
 public:

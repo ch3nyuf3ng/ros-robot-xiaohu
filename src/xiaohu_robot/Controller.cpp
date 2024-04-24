@@ -1,7 +1,7 @@
-#include "XiaohuRobot/Controller.hpp"
+#include "xiaohu_robot/Controller.hpp"
 #include <sstream>
 
-using namespace XiaohuRobot;
+using namespace xiaohu_robot;
 
 Controller::Coordinate::Coordinate(double x, double y, double z):
     x{x},

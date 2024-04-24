@@ -1,6 +1,6 @@
-#include "XiaohuRobot/Foundation/ManipulatorControl.hpp"
+#include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
 
-using namespace XiaohuRobot;
+using namespace xiaohu_robot;
 
 /* struct ManipulatorControl */
 sensor_msgs::JointState ManipulatorControl::createMessage(size_t control_part_quantity) {

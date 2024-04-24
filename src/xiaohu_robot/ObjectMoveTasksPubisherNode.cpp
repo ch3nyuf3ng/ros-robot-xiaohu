@@ -1,10 +1,10 @@
-#include "XiaohuRobot/Configs.hpp"
-#include "XiaohuRobot/MoveTaskMsg.h"
+#include "xiaohu_robot/Configs.hpp"
+#include "xiaohu_robot/MoveTaskMsg.h"
 #include "ros/init.h"
 #include "ros/node_handle.h"
 #include "ros/rate.h"
 
-using namespace XiaohuRobot;
+using namespace xiaohu_robot;
 
 int main(int argc, char* argv[]) {
     ros::init(argc, argv, "publish_move_tasks");

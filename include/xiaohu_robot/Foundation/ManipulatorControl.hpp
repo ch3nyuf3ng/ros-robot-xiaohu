@@ -1,13 +1,13 @@
 #pragma once
 
-#include "XiaohuRobot/Foundation/CommonInterfaces.hpp"
+#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #ifndef XIAOHU_ROBOT_MANIPULATOR_CONTROL_HPP
 #define XIAOHU_ROBOT_MANIPULATOR_CONTROL_HPP
 
 #include "sensor_msgs/JointState.h"
-#include "XiaohuRobot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/Foundation/Measurement.hpp"
 
-namespace XiaohuRobot {
+namespace xiaohu_robot {
 inline namespace Foundation {
 struct ManipulatorControl: public Printable {
     virtual ~ManipulatorControl() = default;

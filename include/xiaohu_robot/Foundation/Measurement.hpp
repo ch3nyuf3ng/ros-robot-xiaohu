@@ -3,7 +3,7 @@
 #ifndef XIAOHU_ROBOT_FOUNDATION_MEASUREMENT_HPP
 #define XIAOHU_ROBOT_FOUNDATION_MEASUREMENT_HPP
 
-#include "XiaohuRobot/Foundation/CommonInterfaces.hpp"
+#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #include <istream>
 #include <memory>
 #include <sstream>
@@ -11,7 +11,7 @@
 #include <string>
 #include <type_traits>
 
-namespace XiaohuRobot {
+namespace xiaohu_robot {
 inline namespace Foundation {
 class Unit: public Equatable<Unit>, public Printable {
 public:
@@ -609,5 +609,5 @@ inline Measurement<UnitFrequency> operator""_kHz(unsigned long long v) {
 }
 }  // namespace literals
 }  // namespace Foundation
-}  // namespace XiaohuRobot
+}  // namespace xiaohu_robot
 #endif

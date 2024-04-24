@@ -1,11 +1,11 @@
-#include "XiaohuRobot/Configs.hpp"
+#include "xiaohu_robot/Configs.hpp"
 #include "ros/init.h"
 #include "ros/node_handle.h"
 #include "ros/rate.h"
 #include "std_msgs/String.h"
 #include <iostream>
 
-using namespace XiaohuRobot;
+using namespace xiaohu_robot;
 
 int main(int argc, char* argv[]) {
     ros::init(argc, argv, "cancel_move_tasks_node");

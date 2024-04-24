@@ -1,6 +1,6 @@
-#include "XiaohuRobot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/Foundation/Measurement.hpp"
 
-using namespace XiaohuRobot;
+using namespace xiaohu_robot;
 using std::shared_ptr;
 
 /* class UnitConverterLinear */

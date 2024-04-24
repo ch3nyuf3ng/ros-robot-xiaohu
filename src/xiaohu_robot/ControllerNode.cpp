@@ -1,12 +1,12 @@
 #include "ros/init.h"
-#include "XiaohuRobot/Controller.hpp"
-#include "XiaohuRobot/Configs.hpp"
+#include "xiaohu_robot/Controller.hpp"
+#include "xiaohu_robot/Configs.hpp"
 
-using namespace XiaohuRobot;
+using namespace xiaohu_robot;
 
 int main(int argc, char* argv[]) {
-    ros::init(argc, argv, "XiaohuRobot");
-    XiaohuRobot::Controller controller{
+    ros::init(argc, argv, "xiaohu_robot");
+    xiaohu_robot::Controller controller{
         Configs::baseStationName,
         Configs::velocityControlTopic,
         Configs::behaviorControlTopic,

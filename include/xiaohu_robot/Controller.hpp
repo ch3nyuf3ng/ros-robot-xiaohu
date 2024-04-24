@@ -1,6 +1,6 @@
 #pragma once
 
-#include "XiaohuRobot/Foundation/CommonInterfaces.hpp"
+#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
 #include "geometry_msgs/Pose.h"
@@ -11,14 +11,14 @@
 #include "sensor_msgs/JointState.h"
 #include "std_msgs/String.h"
 #include "wpb_home_behaviors/Coord.h"
-#include "XiaohuRobot/MoveTaskMsg.h"
-#include "XiaohuRobot/Foundation/ManipulatorControl.hpp"
-#include "XiaohuRobot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/MoveTaskMsg.h"
+#include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
+#include "xiaohu_robot/Foundation/Measurement.hpp"
 #include <cstddef>
 #include <deque>
 #include <string>
 
-namespace XiaohuRobot {
+namespace xiaohu_robot {
 class Controller final {
 public:
     Controller(
@@ -77,7 +77,7 @@ private:
     };
 
     using StringMessagePointer = std_msgs::String::ConstPtr const&;
-    using ObjectMovingTaskMessagePointer = XiaohuRobot::MoveTaskMsg::ConstPtr const&;
+    using ObjectMovingTaskMessagePointer = xiaohu_robot::MoveTaskMsg::ConstPtr const&;
     using CoordinatesMessasgPointer = wpb_home_behaviors::CoordConstPtr const&;
     using VelocityMessage = geometry_msgs::Twist;
     using StringMessage = std_msgs::String;
