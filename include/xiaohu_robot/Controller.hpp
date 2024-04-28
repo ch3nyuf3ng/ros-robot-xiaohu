@@ -146,11 +146,11 @@ private:
     void processObjectMovingTaskRequest(ObjectMovingTaskMessagePointer message_ptr);
     void processStateControlCommand(StringMessagePointer message_ptr);
 
-    void controlRobotVelocity(Velocity target);
-    void changeRobotBehavior(Behavior target);
-    void navigateToWaypoint(String target);
-    void controlRobotManipulator(ManipulatorControl const& target);
-    void grabObject(Coordinate coordinate);
+    void delegateControlingRobotVelocity(Velocity target);
+    void delegateChangingRobotBehavior(Behavior target);
+    void delegateNavigatingToWaypoint(String target);
+    void delegateControlingRobotManipulator(ManipulatorControl const& target);
+    void delegateGrabbingObject(Coordinate coordinate);
 
     static void displayDetectedObjects(CoordinatesMessasgPointer coordinates_ptr);
     static VelocityMessage createVelocityMessage(Velocity velocity);

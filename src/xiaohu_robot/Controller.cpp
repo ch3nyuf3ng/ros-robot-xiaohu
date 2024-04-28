@@ -179,31 +179,31 @@ void Controller::readyToPerformTasks() {
 
 void Controller::goToStorage() {
     if (getTiming() == 0_s)
-        navigateToWaypoint(getCurrentObjectMovingTask().storageName.c_str());
+        delegateNavigatingToWaypoint(getCurrentObjectMovingTask().storageName.c_str());
     incrementTiming();
 }
 
 void Controller::detectObjects() {
     if (getTiming() == 0_s)
-        changeRobotBehavior(Behavior::startObjectDetection);
+        delegateChangingRobotBehavior(Behavior::startObjectDetection);
     incrementTiming();
 }
 
 void Controller::performingObjectGrab() {
     if (getTiming() == 0_s)
-        grabObject(getObjectToGrabCoordinate());
+        delegateGrabbingObject(getObjectToGrabCoordinate());
     incrementTiming();
 }
 
 void Controller::goToDropOffPlace() {
     if (getTiming() == 0_s)
-        navigateToWaypoint(getCurrentObjectMovingTask().dropOffPlaceName);
+        delegateNavigatingToWaypoint(getCurrentObjectMovingTask().dropOffPlaceName);
     incrementTiming();
 }
 
 void Controller::dropOffObject() {
     if (getTiming() == 0_s)
-        controlRobotManipulator(GripperControl{15_cm});
+        delegateControlingRobotManipulator(GripperControl{15_cm});
     else if (getTiming() > 5_s) {
         setTaskState(TaskState::steppingBackward);
         return;
@@ -213,9 +213,9 @@ void Controller::dropOffObject() {
 
 void Controller::stepBackward() {
     if (getTiming() == 0_s)
-        controlRobotVelocity(-0.1_m_per_s);
+        delegateControlingRobotVelocity(-0.1_m_per_s);
     else if (getTiming() > 5_s) {
-        controlRobotVelocity(0_m_per_s);
+        delegateControlingRobotVelocity(0_m_per_s);
         setTaskState(TaskState::retractingTheArm);
         return;
     }
@@ -225,7 +225,7 @@ void Controller::stepBackward() {
 void Controller::retractManipulaor() {
     if (manipulatorArmState == ManipulatorArmState::extended) {
         if (getTiming() == 0_s)
-            controlRobotManipulator(ArmControl{0_cm});
+            delegateControlingRobotManipulator(ArmControl{0_cm});
         else if (getTiming() > 5_s) {
             setManipulatorArmState(ManipulatorArmState::retracted);
             setTaskState(TaskState::haveFinishedPreviousTask);
@@ -253,7 +253,7 @@ void Controller::haveFinishedPreviousTask() {
 
 void Controller::goToBaseStation() {
     if (getTiming() == 0_s)
-        navigateToWaypoint(baseStationName);
+        delegateNavigatingToWaypoint(baseStationName);
     incrementTiming();
 }
 
@@ -317,7 +317,7 @@ void Controller::processObjectDetectionResult(CoordinatesMessasgPointer coordina
         };
         setObjectToGrabCoordinate(coordinate);
 
-        changeRobotBehavior(Behavior::stopObjectDetection);
+        delegateChangingRobotBehavior(Behavior::stopObjectDetection);
         setTaskState(TaskState::performingObjectGrab);
     }
     else {
@@ -390,7 +390,7 @@ void Controller::processStateControlCommand(StringMessagePointer message_ptr) {
     }
 }
 
-void Controller::controlRobotVelocity(Velocity target) {
+void Controller::delegateControlingRobotVelocity(Velocity target) {
     ROS_INFO(
         "Notified subscriber of %s to set velocity to %s.",
         velocityControlMessagePublisher.getTopic().c_str(),
@@ -399,7 +399,7 @@ void Controller::controlRobotVelocity(Velocity target) {
     velocityControlMessagePublisher.publish(createVelocityMessage(target));
 }
 
-void Controller::changeRobotBehavior(Behavior behavior) {
+void Controller::delegateChangingRobotBehavior(Behavior behavior) {
     ROS_INFO(
         "Notified subscriber of %s to change behavior to %s.",
         behaviorControlMessagePublisher.getTopic().c_str(),
@@ -408,7 +408,7 @@ void Controller::changeRobotBehavior(Behavior behavior) {
     behaviorControlMessagePublisher.publish(createBehaviorMessage(behavior));
 }
 
-void Controller::navigateToWaypoint(String waypointName) {
+void Controller::delegateNavigatingToWaypoint(String waypointName) {
     ROS_INFO(
         "Notified subscriber of %s to navigate to %s.",
         navigationWaypointMessagePublisher.getTopic().c_str(),
@@ -417,7 +417,7 @@ void Controller::navigateToWaypoint(String waypointName) {
     navigationWaypointMessagePublisher.publish(createWaypointMessage(std::move(waypointName)));
 }
 
-void Controller::controlRobotManipulator(ManipulatorControl const& plan) {
+void Controller::delegateControlingRobotManipulator(ManipulatorControl const& plan) {
     ROS_INFO(
         "Notified subscriber of %s to set manipulator state to %s.",
         navigationResultMessageSubscriber.getTopic().c_str(),
@@ -426,7 +426,7 @@ void Controller::controlRobotManipulator(ManipulatorControl const& plan) {
     manipulatiorControlMessagePublisher.publish(plan.toMessage());
 }
 
-void Controller::grabObject(Coordinate coordinate) {
+void Controller::delegateGrabbingObject(Coordinate coordinate) {
     ROS_INFO(
         "Notified subscriber of %s to grab object at %s.",
         objectToGrabCoodinateMessagePublisher.getTopic().c_str(),
