@@ -433,7 +433,12 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             ROS_INFO(
                 "Arrived patient: %s (Spent time: %s)", getCurrentTask().patient.c_str(), getTiming().toString().c_str()
             );
-            setCurrentTaskState(TaskState::DeliveringMedicine);
+            if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
+                setCurrentTaskState(TaskState::DeliveringMedicine);
+            else if (getCurrentTask().getTaskType() == TaskType::Inspection)
+                setCurrentTaskState(TaskState::MeasuringTemperature);
+            else
+                throw std::runtime_error{""};
         }
         else if (getCurrentTaskState() == TaskState::GoingToBaseStation) {
             ROS_INFO(
