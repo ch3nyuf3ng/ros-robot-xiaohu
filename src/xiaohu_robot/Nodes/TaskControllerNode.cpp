@@ -239,7 +239,7 @@ void TaskControllerNode::readyToPerformTasks() {
     if (!legacyGeneralTasks.empty()) {
         if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
             setCurrentTaskState(TaskState::GoingToPharmacy);
-        else if(getCurrentTask().getTaskType() == TaskType::Inspection)
+        else if (getCurrentTask().getTaskType() == TaskType::Inspection)
             setCurrentTaskState(TaskState::GoingToPatient);
         else
             throw std::runtime_error{""};
@@ -268,10 +268,9 @@ void TaskControllerNode::performingObjectGrab() {
 
 void TaskControllerNode::goToPatient() {
     if (getTiming() == 0_s) {
-        if (getCurrentTask().type == TaskType::MedicineDelivery)
+        if (getCurrentTask().type == TaskType::MedicineDelivery
+            || getCurrentTask().getTaskType() == TaskType::Inspection)
             delegateNavigatingToWaypoint(getCurrentTask().patient);
-        else if (getCurrentTask().type == TaskType::Inspection) 
-            delegateSpeaking("测温中");
         else
             throw std::runtime_error{""};
     }
@@ -343,9 +342,11 @@ void TaskControllerNode::waypointUnreachable() {
 void TaskControllerNode::measuringTemperature() {
     if (getTiming() == 0_s) {
         delegateSpeaking("测温中。");
-    } else if (getTiming() == 10_s) {
+    }
+    else if (getTiming() == 10_s) {
         delegateSpeaking("测温完成。");
-    } else if (getTiming() == 15_s) {
+    }
+    else if (getTiming() == 15_s) {
         setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
@@ -505,9 +506,7 @@ void TaskControllerNode::whenReceivedLegacyTaskRequest(ObjectMovingTaskMessagePo
 
 void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message) {
     legacyGeneralTasks.emplace_back(LegacyGeneralTask{message});
-    ROS_INFO(
-        "Added a task:\n%s", legacyGeneralTasks.front().toString().c_str()
-    );
+    ROS_INFO("Added a task:\n%s", legacyGeneralTasks.front().toString().c_str());
 }
 
 void TaskControllerNode::whenReceivedStateControlCommand(StringMessagePointer message_ptr) {
@@ -629,7 +628,7 @@ std::string TaskControllerNode::toString(TaskState taskState) {
     case TaskState::PerformingObjectGrab:
         return "Performing Object Grab";
     case TaskState::GoingToPatient:
-        return "Going To Drop-Off Place";
+        return "Going To Patient Place";
     case TaskState::DeliveringMedicine:
         return "Performing Object Drop-Off";
     case TaskState::MovingBackward:
