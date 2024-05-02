@@ -347,7 +347,8 @@ void TaskControllerNode::measuringTemperature() {
     if (getTiming() == 0_s) {
         delegateSpeaking("测温中。");
     }
-    else if (getTiming() >= 10_s && getTiming() <= 10_s + configs.stateCheckingFrequency.perCycleTime()) {
+    else if (getTiming() > 10_s - configs.stateCheckingFrequency.perCycleTime()
+             && getTiming() < 10_s + configs.stateCheckingFrequency.perCycleTime()) {
         delegateSpeaking("测温完成。");
     }
     else if (getTiming() >= 15_s) {
