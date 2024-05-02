@@ -393,7 +393,7 @@ void TaskControllerNode::whenReceivedObjectDetectionResult(ObjectDetectionResult
         getCurrentTask().medicinePosition
             = {coordinates_ptr->x[nearest_object_index],
                coordinates_ptr->y[nearest_object_index],
-               coordinates_ptr->z[nearest_object_index]};
+               coordinates_ptr->z[nearest_object_index] + configs.heightCompensation};
 
         delegateChangingRobotBehavior(ObjectDetectionControl::Stop);
         setCurrentTaskState(TaskState::PerformingObjectGrab);
