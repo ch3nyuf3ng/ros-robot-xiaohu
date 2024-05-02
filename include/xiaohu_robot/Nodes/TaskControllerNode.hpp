@@ -93,7 +93,6 @@ private:
     TaskState currentTaskState;
     TaskState previousTaskState;
     Duration currentTiming;
-    std::deque<Task> tasks;
     std::deque<LegacyGeneralTask> legacyGeneralTasks;
 
     MessagePublisher const velocityCommandMessagePublisher;
@@ -106,7 +105,6 @@ private:
     MessageSubscriber const navigationResultMessageSubscriber;
     MessageSubscriber const objectGrabResultMessageSubscriber;
     MessageSubscriber const legacyGeneralTasksMessageSubscriber;
-    MessageSubscriber const legacyTasksMessageSubscriber;
     MessageSubscriber const taskStateControlMessageSubscriber;
 
     TaskControllerNodeConfigs configs;
@@ -141,7 +139,6 @@ private:
     void whenReceivedObjectDetectionResult(ObjectDetectionResultMessasgePointer coordinates_ptr);
     void whenReceivedNavigationResult(StringMessagePointer message_ptr);
     void whenReceivedObjectGrabResult(StringMessagePointer message_ptr);
-    void whenReceivedLegacyTaskRequest(ObjectMovingTaskMessagePointer message_ptr);
     void whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message);
     void whenReceivedStateControlCommand(StringMessagePointer message_ptr);
 

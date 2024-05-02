@@ -119,9 +119,6 @@ TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
         &TaskControllerNode::whenReceivedObjectGrabResult,
         this
     )},
-    legacyTasksMessageSubscriber{nodeHandle.subscribe<ObjectMovingTaskMessagePointer>(
-        configs.legacyTasksTopic, configs.messageBufferSize, &TaskControllerNode::whenReceivedLegacyTaskRequest, this
-    )},
     legacyGeneralTasksMessageSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
         configs.legacyGeneralTasksTopic,
         configs.messageBufferSize,
@@ -309,14 +306,21 @@ void TaskControllerNode::retractManipulaor() {
 }
 
 void TaskControllerNode::haveFinishedPreviousTask() {
-    ROS_INFO(
-        "Have finished the previous object-moving task (from %s to %s).",
-        getCurrentTask().pharmacy.c_str(),
-        getCurrentTask().patient.c_str()
-    );
-    tasks.pop_front();
+    if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
+        ROS_INFO(
+            "Have finished the previous medicine-delivery task (from %s to %s).",
+            getCurrentTask().pharmacy.c_str(),
+            getCurrentTask().patient.c_str()
+        );
+    } else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
+        ROS_INFO(
+            "Have finished the previous inspection task (%s).",
+            getCurrentTask().patient.c_str()
+        );
+    }
+    legacyGeneralTasks.pop_front();
     showTasks();
-    if (!tasks.empty())
+    if (!legacyGeneralTasks.empty())
         setCurrentTaskState(TaskState::GoingToPharmacy);
     else
         setCurrentTaskState(TaskState::GoingToBaseStation);
@@ -354,12 +358,12 @@ void TaskControllerNode::measuringTemperature() {
 }
 
 void TaskControllerNode::showTasks() const {
-    if (tasks.empty())
+    if (legacyGeneralTasks.empty())
         ROS_INFO("No task to do.");
     else {
-        ROS_INFO("Task to do count: %zd", tasks.size());
+        ROS_INFO("Task to do count: %zd", legacyGeneralTasks.size());
         std::size_t task_index{1};
-        for (auto const& task : tasks) {
+        for (auto const& task : legacyGeneralTasks) {
             ROS_INFO("Task %zd: %s -> %s", task_index, task.pharmacy.c_str(), task.patient.c_str());
         }
     }
@@ -396,7 +400,7 @@ void TaskControllerNode::displayInitializationResult() const {
         detectedObjectCoordinatesMessageSubscriber.getTopic().c_str(),
         navigationResultMessageSubscriber.getTopic().c_str(),
         objectGrabResultMessageSubscriber.getTopic().c_str(),
-        legacyTasksMessageSubscriber.getTopic().c_str(),
+        legacyGeneralTasksMessageSubscriber.getTopic().c_str(),
         taskStateControlMessageSubscriber.getTopic().c_str()
     );
 }
@@ -500,15 +504,6 @@ void TaskControllerNode::whenReceivedObjectGrabResult(StringMessagePointer messa
     }
 }
 
-void TaskControllerNode::whenReceivedLegacyTaskRequest(ObjectMovingTaskMessagePointer message_ptr) {
-    tasks.emplace_back(Task{message_ptr->storage_place_name, message_ptr->drop_place_name});
-    ROS_INFO(
-        "Added task: move an object from %s to %s",
-        message_ptr->storage_place_name.c_str(),
-        message_ptr->drop_place_name.c_str()
-    );
-}
-
 void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message) {
     legacyGeneralTasks.emplace_back(LegacyGeneralTask{message});
     ROS_INFO("Added a task:\n%s", legacyGeneralTasks.front().toString().c_str());
@@ -516,7 +511,7 @@ void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessage
 
 void TaskControllerNode::whenReceivedStateControlCommand(StringMessagePointer message_ptr) {
     if (message_ptr->data == "clear") {
-        tasks.clear();
+        legacyGeneralTasks.clear();
         ROS_INFO("Cancelled all tasks.");
         setCurrentTaskState(TaskState::RetractingTheArm);
     }
@@ -646,6 +641,8 @@ std::string TaskControllerNode::toString(TaskState taskState) {
         return "Going To Base Station";
     case TaskState::WaypointUnreachable:
         return "Waypoint Unreachable";
+    case TaskState::MeasuringTemperature:
+        return "Measuring Temperature";
     }
 }
 }  // namespace Nodes
