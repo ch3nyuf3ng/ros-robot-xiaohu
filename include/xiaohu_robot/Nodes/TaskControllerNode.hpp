@@ -109,7 +109,7 @@ private:
 
     TaskControllerNodeConfigs configs;
 
-    LegacyGeneralTask getCurrentTask() const;
+    LegacyGeneralTask& getCurrentTask();
     TaskState getCurrentTaskState() const;
     TaskState getPreviousTaskState() const;
     Duration getTiming() const;

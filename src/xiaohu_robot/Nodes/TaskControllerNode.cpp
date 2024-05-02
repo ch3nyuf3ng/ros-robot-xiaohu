@@ -40,51 +40,32 @@ int main(int argc, char* argv[]) {
 namespace xiaohu_robot {
 inline namespace Nodes {
 TaskControllerNodeConfigs::TaskControllerNodeConfigs(
-    std::string baseStationName,
-    std::string velocityCommandTopic,
-    std::string objectDetectionControlTopic,
-    std::string navigationWaypointTopic,
-    std::string objectGrabbingCoordinateTopic,
-    std::string manipulatorControlTopic,
-    std::string detectedObjectCoordinatesTopic,
-    std::string navigationResultTopic,
-    std::string objectGrabbingResultTopic,
-    std::string legacyTasksTopic,
-    std::string legacyGeneralTasksTopic,
-    std::string taskStateControlTopic,
-    std::string speakTextTopic,
-    std::size_t messageBufferSize,
-    std::string nodeNamespace,
-    Frequency stateCheckingFrequency,
-    Duration initialPositionCalibrationTime,
-    Length heightCompensation,
-    bool hasManipulator
+    std::string baseStationName, std::string velocityCommandTopic, std::string objectDetectionControlTopic,
+    std::string navigationWaypointTopic, std::string objectGrabbingCoordinateTopic, std::string manipulatorControlTopic,
+    std::string detectedObjectCoordinatesTopic, std::string navigationResultTopic,
+    std::string objectGrabbingResultTopic, std::string legacyTasksTopic, std::string legacyGeneralTasksTopic,
+    std::string taskStateControlTopic, std::string speakTextTopic, std::size_t messageBufferSize,
+    std::string nodeNamespace, Frequency stateCheckingFrequency, Duration initialPositionCalibrationTime,
+    Length heightCompensation, bool hasManipulator
 ):
-    baseStationName{std::move(baseStationName)},
-    velocityCommandTopic{std::move(velocityCommandTopic)},
+    baseStationName{std::move(baseStationName)}, velocityCommandTopic{std::move(velocityCommandTopic)},
     objectDetectionControlTopic{std::move(objectDetectionControlTopic)},
     navigationWaypointTopic{std::move(navigationWaypointTopic)},
     objectGrabbingCoordinateTopic{std::move(objectGrabbingCoordinateTopic)},
     manipulatorControlTopic{std::move(manipulatorControlTopic)},
     detectedObjectCoordinatesTopic{std::move(detectedObjectCoordinatesTopic)},
     navigationResultTopic{std::move(navigationResultTopic)},
-    objectGrabbingResultTopic{std::move(objectGrabbingResultTopic)},
-    legacyTasksTopic{std::move(legacyTasksTopic)},
+    objectGrabbingResultTopic{std::move(objectGrabbingResultTopic)}, legacyTasksTopic{std::move(legacyTasksTopic)},
     legacyGeneralTasksTopic{std::move(legacyGeneralTasksTopic)},
-    taskStateControlTopic{std::move(taskStateControlTopic)},
-    speakTextTopic{std::move(speakTextTopic)},
-    messageBufferSize{messageBufferSize},
-    nodeNamespace{std::move(nodeNamespace)},
+    taskStateControlTopic{std::move(taskStateControlTopic)}, speakTextTopic{std::move(speakTextTopic)},
+    messageBufferSize{messageBufferSize}, nodeNamespace{std::move(nodeNamespace)},
     stateCheckingFrequency{std::move(stateCheckingFrequency)},
     initialPositionCalibrationTime{std::move(initialPositionCalibrationTime)},
-    heightCompensation{std::move(heightCompensation)},
-    hasManipulator{hasManipulator} {}
+    heightCompensation{std::move(heightCompensation)}, hasManipulator{hasManipulator} {}
 
 TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
-    nodeHandle{configs.nodeNamespace},
-    currentTaskState{TaskState::CalibratingInitialPosition},
-    previousTaskState{TaskState::ReadyToPerformTasks},
-    currentTiming{0_s},
+    nodeHandle{configs.nodeNamespace}, currentTaskState{TaskState::CalibratingInitialPosition},
+    previousTaskState{TaskState::ReadyToPerformTasks}, currentTiming{0_s},
     velocityCommandMessagePublisher{
         nodeHandle.advertise<VelocityCommandMessage>(configs.velocityCommandTopic, configs.messageBufferSize)
     },
@@ -102,33 +83,23 @@ TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
     },
     speakTextMessagePublisher{nodeHandle.advertise<StringMessage>(configs.speakTextTopic, configs.messageBufferSize)},
     detectedObjectCoordinatesMessageSubscriber{nodeHandle.subscribe<ObjectDetectionResultMessasgePointer>(
-        configs.detectedObjectCoordinatesTopic,
-        configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedObjectDetectionResult,
-        this
+        configs.detectedObjectCoordinatesTopic, configs.messageBufferSize,
+        &TaskControllerNode::whenReceivedObjectDetectionResult, this
     )},
     navigationResultMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        configs.navigationResultTopic,
-        configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedNavigationResult,
+        configs.navigationResultTopic, configs.messageBufferSize, &TaskControllerNode::whenReceivedNavigationResult,
         this
     )},
     objectGrabResultMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        configs.objectGrabbingResultTopic,
-        configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedObjectGrabResult,
+        configs.objectGrabbingResultTopic, configs.messageBufferSize, &TaskControllerNode::whenReceivedObjectGrabResult,
         this
     )},
     legacyGeneralTasksMessageSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
-        configs.legacyGeneralTasksTopic,
-        configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedLegacyGeneralTaskRequest,
-        this
+        configs.legacyGeneralTasksTopic, configs.messageBufferSize,
+        &TaskControllerNode::whenReceivedLegacyGeneralTaskRequest, this
     )},
     taskStateControlMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        configs.taskStateControlTopic,
-        configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedStateControlCommand,
+        configs.taskStateControlTopic, configs.messageBufferSize, &TaskControllerNode::whenReceivedStateControlCommand,
         this
     )},
     configs{std::move(configs)} {
@@ -185,7 +156,7 @@ void TaskControllerNode::run() {
     }
 }
 
-LegacyGeneralTask TaskControllerNode::getCurrentTask() const {
+LegacyGeneralTask& TaskControllerNode::getCurrentTask() {
     return legacyGeneralTasks.front();
 }
 
@@ -311,8 +282,7 @@ void TaskControllerNode::retractManipulaor() {
 void TaskControllerNode::haveFinishedPreviousTask() {
     if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
         ROS_INFO(
-            "Have finished the previous medicine-delivery task (from %s to %s).",
-            getCurrentTask().pharmacy.c_str(),
+            "Have finished the previous medicine-delivery task (from %s to %s).", getCurrentTask().pharmacy.c_str(),
             getCurrentTask().patient.c_str()
         );
     }
@@ -327,7 +297,8 @@ void TaskControllerNode::haveFinishedPreviousTask() {
         }
         else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
             setCurrentTaskState(TaskState::GoingToPatient);
-        } else {
+        }
+        else {
             throw std::runtime_error{""};
         }
     }
@@ -403,19 +374,14 @@ void TaskControllerNode::displayInitializationResult() const {
         "objectGrabResultMessageSubscriber: %s\n"
         "objectMoveTasksMessageSubscriber: %s\n"
         "taskStateControlMessageSubscriber: %s\n",
-        configs.baseStationName.c_str(),
-        configs.stateCheckingFrequency.toString().c_str(),
-        configs.initialPositionCalibrationTime.toString().c_str(),
-        velocityCommandMessagePublisher.getTopic().c_str(),
-        manipulatiorControlMessagePublisher.getTopic().c_str(),
-        navigationWaypointMessagePublisher.getTopic().c_str(),
+        configs.baseStationName.c_str(), configs.stateCheckingFrequency.toString().c_str(),
+        configs.initialPositionCalibrationTime.toString().c_str(), velocityCommandMessagePublisher.getTopic().c_str(),
+        manipulatiorControlMessagePublisher.getTopic().c_str(), navigationWaypointMessagePublisher.getTopic().c_str(),
         objectGrabbingCoodinateMessagePublisher.getTopic().c_str(),
         manipulatiorControlMessagePublisher.getTopic().c_str(),
         detectedObjectCoordinatesMessageSubscriber.getTopic().c_str(),
-        navigationResultMessageSubscriber.getTopic().c_str(),
-        objectGrabResultMessageSubscriber.getTopic().c_str(),
-        legacyGeneralTasksMessageSubscriber.getTopic().c_str(),
-        taskStateControlMessageSubscriber.getTopic().c_str()
+        navigationResultMessageSubscriber.getTopic().c_str(), objectGrabResultMessageSubscriber.getTopic().c_str(),
+        legacyGeneralTasksMessageSubscriber.getTopic().c_str(), taskStateControlMessageSubscriber.getTopic().c_str()
     );
 }
 
@@ -424,11 +390,13 @@ void TaskControllerNode::whenReceivedObjectDetectionResult(ObjectDetectionResult
         displayDetectedObjects(coordinates_ptr);
 
         constexpr std::size_t nearest_object_index{0};
-        getCurrentTask().medicinePosition
-            = {coordinates_ptr->x[nearest_object_index],
-               coordinates_ptr->y[nearest_object_index],
-               coordinates_ptr->z[nearest_object_index] + configs.heightCompensation};
-
+        Coordinate coord{
+            coordinates_ptr->x[nearest_object_index], coordinates_ptr->y[nearest_object_index],
+            coordinates_ptr->z[nearest_object_index] + configs.heightCompensation.getBaseUnitValue()
+        };
+        getCurrentTask().medicinePosition = coord;
+        ROS_INFO("temp coordinate:\n%s", coord.toString().c_str());
+        ROS_INFO("Current task coordinate:\n%s", getCurrentTask().medicinePosition.toString().c_str());
         delegateChangingRobotBehavior(ObjectDetectionControl::Stop);
         setCurrentTaskState(TaskState::PerformingObjectGrab);
     }
@@ -441,8 +409,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
     if (message_ptr->data == "done")
         if (getCurrentTaskState() == TaskState::GoingToPharmacy) {
             ROS_INFO(
-                "Arrived pharmacy: %s (Spent time: %s)",
-                getCurrentTask().pharmacy.c_str(),
+                "Arrived pharmacy: %s (Spent time: %s)", getCurrentTask().pharmacy.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::DetectingMedicine);
@@ -460,8 +427,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
         }
         else if (getCurrentTaskState() == TaskState::GoingToBaseStation) {
             ROS_INFO(
-                "Arrived base station: %s (Spent time: %s)",
-                configs.baseStationName.c_str(),
+                "Arrived base station: %s (Spent time: %s)", configs.baseStationName.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::ReadyToPerformTasks);
@@ -472,24 +438,21 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
     else if (message_ptr->data == "failure") {
         if (getCurrentTaskState() == TaskState::GoingToPharmacy) {
             ROS_INFO(
-                "Failed to arrive pharmacy: %s (Spent time: %s)",
-                getCurrentTask().pharmacy.c_str(),
+                "Failed to arrive pharmacy: %s (Spent time: %s)", getCurrentTask().pharmacy.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
         }
         else if (getCurrentTaskState() == TaskState::GoingToPatient) {
             ROS_INFO(
-                "Failed to arrive patient: %s (Spent time: %s)",
-                getCurrentTask().patient.c_str(),
+                "Failed to arrive patient: %s (Spent time: %s)", getCurrentTask().patient.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
         }
         else if (getCurrentTaskState() == TaskState::GoingToBaseStation) {
             ROS_INFO(
-                "Failed to arrive base station: %s (Spent time: %s)",
-                configs.baseStationName.c_str(),
+                "Failed to arrive base station: %s (Spent time: %s)", configs.baseStationName.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
@@ -533,8 +496,7 @@ void TaskControllerNode::whenReceivedStateControlCommand(StringMessagePointer me
 
 void TaskControllerNode::delegateControlingRobotVelocity(LinearSpeed target) {
     ROS_INFO(
-        "Notified subscriber of %s to set velocity to %s.",
-        velocityCommandMessagePublisher.getTopic().c_str(),
+        "Notified subscriber of %s to set velocity to %s.", velocityCommandMessagePublisher.getTopic().c_str(),
         target.toString().c_str()
     );
     VelocityCommand velocityCommand{target, 0_m_per_s, 0_deg_per_s};
@@ -544,16 +506,14 @@ void TaskControllerNode::delegateControlingRobotVelocity(LinearSpeed target) {
 void TaskControllerNode::delegateChangingRobotBehavior(ObjectDetectionControl behavior) {
     ROS_INFO(
         "Notified subscriber of %s to change behavior to %s.",
-        objectDetectionControlMessagePublisher.getTopic().c_str(),
-        toString(behavior).c_str()
+        objectDetectionControlMessagePublisher.getTopic().c_str(), toString(behavior).c_str()
     );
     objectDetectionControlMessagePublisher.publish(createObjectDetectionControlMessage(behavior));
 }
 
 void TaskControllerNode::delegateNavigatingToWaypoint(std::string waypointName) {
     ROS_INFO(
-        "Notified subscriber of %s to navigate to %s.",
-        navigationWaypointMessagePublisher.getTopic().c_str(),
+        "Notified subscriber of %s to navigate to %s.", navigationWaypointMessagePublisher.getTopic().c_str(),
         waypointName.c_str()
     );
     navigationWaypointMessagePublisher.publish(createWaypointMessage(std::move(waypointName)));
@@ -562,16 +522,14 @@ void TaskControllerNode::delegateNavigatingToWaypoint(std::string waypointName) 
 void TaskControllerNode::delegateControlingRobotManipulator(ManipulatorControl const& plan) {
     ROS_INFO(
         "Notified subscriber of %s to set manipulator state to %s.",
-        manipulatiorControlMessagePublisher.getTopic().c_str(),
-        plan.toString().c_str()
+        manipulatiorControlMessagePublisher.getTopic().c_str(), plan.toString().c_str()
     );
     manipulatiorControlMessagePublisher.publish(plan.toMessage());
 }
 
 void TaskControllerNode::delegateObjectGrabbing(Coordinate coordinate) {
     ROS_INFO(
-        "Notified subscriber of %s to grab object at %s.",
-        objectGrabbingCoodinateMessagePublisher.getTopic().c_str(),
+        "Notified subscriber of %s to grab object at %s.", objectGrabbingCoodinateMessagePublisher.getTopic().c_str(),
         coordinate.toString().c_str()
     );
     objectGrabbingCoodinateMessagePublisher.publish(coordinate.toMessage());
@@ -610,11 +568,8 @@ void TaskControllerNode::displayDetectedObjects(ObjectDetectionResultMessasgePoi
     ROS_INFO("Total amount of objects: %zd", total_amount);
     for (std::size_t object_id{0}; object_id < total_amount; ++object_id) {
         ROS_INFO(
-            "object %s's coordinate: (%.2f, %.2f, %.2f)%s",
-            coordinates_ptr->name[object_id].c_str(),
-            coordinates_ptr->x[object_id],
-            coordinates_ptr->y[object_id],
-            coordinates_ptr->z[object_id],
+            "object %s's coordinate: (%.2f, %.2f, %.2f)%s", coordinates_ptr->name[object_id].c_str(),
+            coordinates_ptr->x[object_id], coordinates_ptr->y[object_id], coordinates_ptr->z[object_id],
             object_id == 0 ? " which is nearest and will be picked" : ""
         );
     }

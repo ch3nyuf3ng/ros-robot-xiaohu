@@ -32,10 +32,10 @@ struct Coordinate final: public Printable, public MessageConvertible<CoordinateM
         orientationW{std::move(message.orientation.w)} {}
 
     template<typename NumberType, typename = std::enable_if_t<std::is_arithmetic<NumberType>::value>>
-    Coordinate(NumberType positionX, NumberType positionY, NumberType positionZ):
-        positionX{static_cast<double>(positionX)},
-        positionY{static_cast<double>(positionY)},
-        positionZ{static_cast<double>(positionZ)},
+    Coordinate(NumberType x, NumberType y, NumberType z):
+        positionX{static_cast<double>(x)},
+        positionY{static_cast<double>(y)},
+        positionZ{static_cast<double>(z)},
         orientationX{},
         orientationY{},
         orientationZ{},
@@ -58,6 +58,17 @@ struct Coordinate final: public Printable, public MessageConvertible<CoordinateM
         orientationY{static_cast<double>(orientationY)},
         orientationZ{static_cast<double>(orientationZ)},
         orientationW{static_cast<double>(orientationW)} {}
+
+    Coordinate& operator=(Coordinate other) {
+        this->positionX = other.positionX;
+        this->positionY = other.positionY;
+        this->positionZ = other.positionZ;
+        this->orientationX = other.orientationX;
+        this->orientationY = other.orientationY;
+        this->orientationZ = other.orientationZ;
+        this->orientationW = other.orientationW;
+        return *this;
+    }
 
     std::string toString() const override;
     CoordinateMessage toMessage() const override;
