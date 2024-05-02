@@ -321,10 +321,19 @@ void TaskControllerNode::haveFinishedPreviousTask() {
     }
     legacyGeneralTasks.pop_front();
     showTasks();
-    if (!legacyGeneralTasks.empty())
-        setCurrentTaskState(TaskState::GoingToPharmacy);
-    else
+    if (!legacyGeneralTasks.empty()) {
+        if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
+            setCurrentTaskState(TaskState::GoingToPharmacy);
+        }
+        else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
+            setCurrentTaskState(TaskState::GoingToPatient);
+        } else {
+            throw std::runtime_error{""};
+        }
+    }
+    else {
         setCurrentTaskState(TaskState::GoingToBaseStation);
+    }
 }
 
 void TaskControllerNode::goToBaseStation() {
