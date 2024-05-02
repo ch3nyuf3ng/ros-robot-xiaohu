@@ -217,7 +217,6 @@ void TaskControllerNode::startInitialPositionCalibration() {
             "Please estimate initial position in %f seconds.", configs.initialPositionCalibrationTime.getBaseUnitValue()
         );
     else if (getTiming() > configs.initialPositionCalibrationTime) {
-        delegateSpeaking("测试文字转语音。");
         setCurrentTaskState(TaskState::ReadyToPerformTasks);
         return;
     }
@@ -226,7 +225,7 @@ void TaskControllerNode::startInitialPositionCalibration() {
 
 void TaskControllerNode::readyToPerformTasks() {
     if (!tasks.empty()) {
-        if (getCurrentTask().storagePlaceName != "null")
+        if (getCurrentTask().pharmacy != "null")
             setCurrentTaskState(TaskState::GoingToPharmacy);
         else
             setCurrentTaskState(TaskState::GoingToPatient);
@@ -237,7 +236,7 @@ void TaskControllerNode::readyToPerformTasks() {
 
 void TaskControllerNode::goToPharmacy() {
     if (getTiming() == 0_s)
-        delegateNavigatingToWaypoint(getCurrentTask().storagePlaceName.c_str());
+        delegateNavigatingToWaypoint(getCurrentTask().pharmacy.c_str());
     incrementTiming();
 }
 
@@ -255,8 +254,8 @@ void TaskControllerNode::performingObjectGrab() {
 
 void TaskControllerNode::goToPatient() {
     if (getTiming() == 0_s) {
-        if (getCurrentTask().storagePlaceName != "null")
-            delegateNavigatingToWaypoint(getCurrentTask().dropOffPlaceName);
+        if (getCurrentTask().pharmacy != "null")
+            delegateNavigatingToWaypoint(getCurrentTask().patient);
         else {
             delegateSpeaking("测温中");
         }
@@ -298,8 +297,8 @@ void TaskControllerNode::retractManipulaor() {
 void TaskControllerNode::haveFinishedPreviousTask() {
     ROS_INFO(
         "Have finished the previous object-moving task (from %s to %s).",
-        getCurrentTask().storagePlaceName.c_str(),
-        getCurrentTask().dropOffPlaceName.c_str()
+        getCurrentTask().pharmacy.c_str(),
+        getCurrentTask().patient.c_str()
     );
     tasks.pop_front();
     showTasks();
@@ -333,7 +332,7 @@ void TaskControllerNode::showTasks() const {
         ROS_INFO("Task to do count: %zd", tasks.size());
         std::size_t task_index{1};
         for (auto const& task : tasks) {
-            ROS_INFO("Task %zd: %s -> %s", task_index, task.storagePlaceName.c_str(), task.dropOffPlaceName.c_str());
+            ROS_INFO("Task %zd: %s -> %s", task_index, task.pharmacy.c_str(), task.patient.c_str());
         }
     }
 }
@@ -397,7 +396,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
         if (getCurrentTaskState() == TaskState::GoingToPharmacy) {
             ROS_INFO(
                 "Arrived pharmacy: %s (Spent time: %s)",
-                getCurrentTask().storagePlaceName.c_str(),
+                getCurrentTask().pharmacy.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::DetectingMedicine);
@@ -405,7 +404,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
         else if (getCurrentTaskState() == TaskState::GoingToPatient) {
             ROS_INFO(
                 "Arrived patient: %s (Spent time: %s)",
-                getCurrentTask().dropOffPlaceName.c_str(),
+                getCurrentTask().patient.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::DeliveringMedicine);
@@ -425,7 +424,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
         if (getCurrentTaskState() == TaskState::GoingToPharmacy) {
             ROS_INFO(
                 "Failed to arrive pharmacy: %s (Spent time: %s)",
-                getCurrentTask().storagePlaceName.c_str(),
+                getCurrentTask().pharmacy.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
@@ -433,7 +432,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
         else if (getCurrentTaskState() == TaskState::GoingToPatient) {
             ROS_INFO(
                 "Failed to arrive patient: %s (Spent time: %s)",
-                getCurrentTask().dropOffPlaceName.c_str(),
+                getCurrentTask().patient.c_str(),
                 getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);

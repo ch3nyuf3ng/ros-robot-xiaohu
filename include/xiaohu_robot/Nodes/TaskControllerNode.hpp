@@ -80,8 +80,8 @@ private:
     };
 
     struct Task {
-        std::string storagePlaceName;
-        std::string dropOffPlaceName;
+        std::string pharmacy;
+        std::string patient;
         Coordinate objectStoragePosition;
     };
 
