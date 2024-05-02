@@ -52,7 +52,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  MoveTaskMsg.msg
   NodeControlMessage.msg
   GeneralTaskMessage.msg
   InspectionTasksMessage.msg
