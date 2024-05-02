@@ -202,7 +202,7 @@ public:
         value{value},
         unitSharedPtr{std::move(unitSharedPtr)} {}
 
-    double get_value() const {
+    double getValue() const {
         return value;
     }
 
@@ -286,12 +286,14 @@ public:
         return operator+=(-rhs);
     }
 
-    Measurement& operator*=(double rhs) {
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+    Measurement& operator*=(T rhs) {
         value *= rhs;
         return *this;
     }
 
-    Measurement& operator/=(double rhs) {
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+    Measurement& operator/=(T rhs) {
         value /= rhs;
         return *this;
     }
@@ -316,14 +318,28 @@ public:
         return lhs;
     }
 
-    friend Measurement operator*(Measurement lhs, double rhs) {
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+    friend Measurement operator*(Measurement lhs, T rhs) {
         lhs *= rhs;
         return lhs;
     }
 
-    friend Measurement operator/(Measurement lhs, double rhs) {
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+    friend Measurement operator*(T lhs, Measurement rhs) {
+        rhs *= lhs;
+        return rhs;
+    }
+
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+    friend Measurement operator/(Measurement lhs, T rhs) {
         lhs /= rhs;
         return lhs;
+    }
+
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+    friend Measurement operator/(T lhs, Measurement rhs) {
+        rhs /= lhs;
+        return rhs;
     }
 
     template<typename T = UnitType, std::enable_if_t<!std::is_base_of<ConvertibleUnit, T>::value, bool> = true>

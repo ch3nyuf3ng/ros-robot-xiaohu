@@ -1,10 +1,10 @@
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
 
-using namespace xiaohu_robot;
-
+namespace xiaohu_robot {
+inline namespace Foundation {
 /* struct ManipulatorControl */
-sensor_msgs::JointState ManipulatorControl::createMessage(size_t control_part_quantity) {
-    sensor_msgs::JointState message{};
+ManipulatorControlMessage ManipulatorControl::createMessage(std::size_t control_part_quantity) {
+    ManipulatorControlMessage message{};
 
     message.effort.resize(control_part_quantity);
     message.name.resize(control_part_quantity);
@@ -15,12 +15,12 @@ sensor_msgs::JointState ManipulatorControl::createMessage(size_t control_part_qu
 }
 
 /* struct ArmControl */
-ArmControl::ArmControl(Measurement<UnitLength> const& liftHeight, Measurement<UnitSpeed> const& liftSpeed):
+ArmControl::ArmControl(Length const& liftHeight, LinearSpeed const& liftSpeed):
     liftHeight{liftHeight},
     liftSpeed{liftSpeed} {}
 
-sensor_msgs::JointState ArmControl::toMessage() const {
-    sensor_msgs::JointState controlMessage{createMessage(1)};
+ManipulatorControlMessage ArmControl::toMessage() const {
+    ManipulatorControlMessage controlMessage{createMessage(1)};
 
     controlMessage.name[0] = "lift";
     controlMessage.position[0] = liftHeight.getBaseUnitValue();
@@ -33,14 +33,12 @@ std::string ArmControl::toString() const {
     return "ArmControl{liftHeight: " + liftHeight.toString() + ", liftSpeed: " + liftSpeed.toString() + "}";
 }
 
-GripperControl::GripperControl(
-    Measurement<UnitLength> const& gripper_finger_gap, Measurement<UnitAngularSpeed> const& gripper_move_speed
-):
+GripperControl::GripperControl(Length const& gripper_finger_gap, AngularSpeed const& gripper_move_speed):
     fingerGap{gripper_finger_gap},
     moveSpeed{gripper_move_speed} {}
 
-sensor_msgs::JointState GripperControl::toMessage() const {
-    sensor_msgs::JointState controlMessage{createMessage(1)};
+ManipulatorControlMessage GripperControl::toMessage() const {
+    ManipulatorControlMessage controlMessage{createMessage(1)};
 
     controlMessage.name[0] = "gripper";
     controlMessage.position[0] = fingerGap.getBaseUnitValue();
@@ -52,3 +50,5 @@ sensor_msgs::JointState GripperControl::toMessage() const {
 std::string GripperControl::toString() const {
     return "GripperControl{fingerGap: " + fingerGap.toString() + ", moveSpeed: " + moveSpeed.toString() + "}";
 }
+}  // namespace Foundation
+}  // namespace xiaohu_robot

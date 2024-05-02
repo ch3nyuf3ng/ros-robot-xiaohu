@@ -112,12 +112,12 @@ UnitSpeed const* UnitSpeed::getBaseUnit() const {
 }
 
 /* class UnitAngularSpeed */
-shared_ptr<UnitAngularSpeed const> const UnitAngularSpeed::degreesPerSecond{UnitAngularSpeed::makeConst("°/s", 1)};
+shared_ptr<UnitAngularSpeed const> const UnitAngularSpeed::degreesPerSecond{UnitAngularSpeed::makeConst("deg/s", 1)};
 shared_ptr<UnitAngularSpeed const> const UnitAngularSpeed::arcMinutesPerSecond{
-    UnitAngularSpeed::makeConst("'/s", 0.0166667)
+    UnitAngularSpeed::makeConst("arcmin/s", 0.0166667)
 };
 shared_ptr<UnitAngularSpeed const> const UnitAngularSpeed::arcSecondsPerSecond{
-    UnitAngularSpeed::makeConst("\"/s", 0.00027778)
+    UnitAngularSpeed::makeConst("arcsec/s", 0.00027778)
 };
 shared_ptr<UnitAngularSpeed const> const UnitAngularSpeed::radiansPerSecond{
     UnitAngularSpeed::makeConst("rad/s", 57.2958)

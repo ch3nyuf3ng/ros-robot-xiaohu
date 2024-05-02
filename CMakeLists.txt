@@ -52,6 +52,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   MoveTaskMsg.msg
+  NodeControlMessage.msg
+  GeneralTaskMessage.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -131,6 +133,10 @@ include_directories(
 add_library(${PROJECT_NAME}_foundation
   src/${PROJECT_NAME}/Foundation/Measurement.cpp
   src/${PROJECT_NAME}/Foundation/ManipulatorControl.cpp
+  src/${PROJECT_NAME}/Foundation/Coordinate.cpp
+  src/${PROJECT_NAME}/Foundation/NodeControl.cpp
+  src/${PROJECT_NAME}/Foundation/VelocityCommand.cpp
+  src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
 )
 
 ## Add cmake target dependencies of the library
@@ -141,48 +147,29 @@ add_library(${PROJECT_NAME}_foundation
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_controller_node
-  src/${PROJECT_NAME}/Controller.cpp
-  src/${PROJECT_NAME}/ControllerNode.cpp
-)
-
-add_executable(${PROJECT_NAME}_move_tasks_publish_node
-  src/${PROJECT_NAME}/ObjectMoveTasksPubisherNode.cpp
+add_executable(${PROJECT_NAME}_task_controller_node
+  src/${PROJECT_NAME}/Nodes/TaskControllerNode.cpp
 )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-set_target_properties(${PROJECT_NAME}_controller_node
+set_target_properties(${PROJECT_NAME}_task_controller_node
   PROPERTIES
-    OUTPUT_NAME move_objects_node
-    PREFIX ""
-)
-set_target_properties(${PROJECT_NAME}_move_tasks_publish_node
-  PROPERTIES
-    OUTPUT_NAME move_tasks_publish_node
+    OUTPUT_NAME task_controller_node
     PREFIX ""
 )
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(${PROJECT_NAME}_controller_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-add_dependencies(${PROJECT_NAME}_move_tasks_publish_node
+add_dependencies(${PROJECT_NAME}_task_controller_node
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_controller_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-target_link_libraries(${PROJECT_NAME}_move_tasks_publish_node
+target_link_libraries(${PROJECT_NAME}_task_controller_node
   ${PROJECT_NAME}_foundation
   ${catkin_LIBRARIES}
 )
