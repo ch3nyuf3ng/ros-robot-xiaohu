@@ -285,7 +285,8 @@ void TaskControllerNode::deliverMedicine() {
     else if (getTiming() > 10_s && !haveDropped) {
         delegateControlingRobotManipulator(GripperControl{15_cm});
         haveDropped = true;
-    } else if (getTiming() > 20_s) {
+    }
+    else if (getTiming() > 20_s) {
         setCurrentTaskState(TaskState::MovingBackward);
         return;
     }

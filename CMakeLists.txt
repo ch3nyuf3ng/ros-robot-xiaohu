@@ -161,10 +161,6 @@ add_executable(${PROJECT_NAME}_task_controller_node
   src/${PROJECT_NAME}/Nodes/TaskControllerNode.cpp
 )
 
-add_executable(coord_test
-  src/${PROJECT_NAME}/CoordTest.cpp
-)
-
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -184,11 +180,6 @@ add_dependencies(${PROJECT_NAME}_task_controller_node
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_task_controller_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-target_link_libraries(coord_test
   ${PROJECT_NAME}_foundation
   ${catkin_LIBRARIES}
 )

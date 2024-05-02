@@ -1,2 +1,0 @@
-string storage_place_name
-string drop_place_name

@@ -16,14 +16,15 @@
 #include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/GeneralTaskMessage.h"
 #include "xiaohu_robot/InspectionTasksMessage.h"
-#include "xiaohu_robot/MoveTaskMsg.h"
-#include "xiaohu_robot/NodeControlMessage.h"
 #include "xiaohu_robot/MappingTaskMessage.h"
 #include "xiaohu_robot/MedicineDeliverySingleTaskMessage.h"
 #include "xiaohu_robot/MedicineDeliveryTasksMessage.h"
+#include "xiaohu_robot/MoveTaskMsg.h"
+#include "xiaohu_robot/NodeControlMessage.h"
+
 namespace xiaohu_robot {
 inline namespace Foundation {
-inline namespace Typedefs{
+inline namespace Typedefs {
 using StringMessage = std_msgs::String;
 using VelocityCommandMessage = geometry_msgs::Twist;
 using CoordinateMessage = geometry_msgs::Pose;
@@ -52,7 +53,7 @@ using Duration = Measurement<UnitDuration>;
 using Frequency = Measurement<UnitFrequency>;
 using LinearSpeed = Measurement<UnitSpeed>;
 using AngularSpeed = Measurement<UnitAngularSpeed>;
-}
+}  // namespace Typedefs
 }  // namespace Foundation
 }  // namespace xiaohu_robot
 

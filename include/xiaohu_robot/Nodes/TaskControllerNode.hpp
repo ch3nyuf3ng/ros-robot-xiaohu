@@ -12,7 +12,7 @@
 
 namespace xiaohu_robot {
 inline namespace Nodes {
-struct TaskControllerNodeConfigs final{
+struct TaskControllerNodeConfigs final {
     std::string baseStationName;
     std::string velocityCommandTopic;
     std::string objectDetectionControlTopic;
@@ -81,12 +81,6 @@ private:
     enum class ObjectDetectionControl {
         Start,
         Stop
-    };
-
-    struct Task {
-        std::string pharmacy;
-        std::string patient;
-        Coordinate medicinePosition;
     };
 
     NodeHandle nodeHandle;

@@ -66,12 +66,6 @@ struct MedicineDeliveryTasks final: public SpecificTask {
 };
 
 struct LegacyGeneralTask final: public Printable {
-    enum struct Type {
-        Mapping,
-        Inspection,
-        MedicineDelivery
-    };
-
     TaskType type;
     std::string mapName;
     std::string savePath;
