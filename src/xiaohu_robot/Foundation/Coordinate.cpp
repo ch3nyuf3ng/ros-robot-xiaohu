@@ -5,7 +5,9 @@ namespace xiaohu_robot {
 inline namespace Foundation {
 std::string Coordinate::toString() const {
     std::ostringstream oss;
-    oss << "Coordinate{x: " << positionX << ", y: " << positionY << ", z: " << positionZ << "}";
+    oss << "Position{x: " << positionX << ", y: " << positionY << ", z: " << positionZ << "}\n"
+        << "Oreientation{x: " << orientationX << ", y" << orientationY << ", z: " << orientationZ
+        << ", w: " << orientationW << "}";
     return oss.str();
 }
 

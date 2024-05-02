@@ -22,14 +22,14 @@ struct Coordinate final: public Printable, public MessageConvertible<CoordinateM
         orientationZ{},
         orientationW{} {};
 
-    Coordinate(CoordinateMessagePointer message):
-        positionX{message->position.x},
-        positionY{message->position.y},
-        positionZ(message->position.z),
-        orientationX{message->orientation.x},
-        orientationY{message->orientation.y},
-        orientationZ{message->orientation.z},
-        orientationW{message->orientation.w} {}
+    Coordinate(CoordinateMessage message):
+        positionX{std::move(message.position.x)},
+        positionY{std::move(message.position.y)},
+        positionZ(std::move(message.position.z)),
+        orientationX{std::move(message.orientation.x)},
+        orientationY{std::move(message.orientation.y)},
+        orientationZ{std::move(message.orientation.z)},
+        orientationW{std::move(message.orientation.w)} {}
 
     template<typename NumberType, typename = std::enable_if_t<std::is_arithmetic<NumberType>::value>>
     Coordinate(NumberType positionX, NumberType positionY, NumberType positionZ):

@@ -58,7 +58,7 @@ add_message_files(
   InspectionTasksMessage.msg
   MappingTaskMessage.msg
   MedicineDeliverySingleTaskMessage.msg
-  MedicineDeliveryTasksMessages.msg
+  MedicineDeliveryTasksMessage.msg
 )
 
 ## Generate services in the 'srv' folder

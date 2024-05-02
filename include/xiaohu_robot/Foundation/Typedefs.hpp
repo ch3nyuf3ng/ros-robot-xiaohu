@@ -14,9 +14,12 @@
 #include "std_msgs/String.h"
 #include "wpb_home_behaviors/Coord.h"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/InspectionTasksMessage.h"
 #include "xiaohu_robot/MoveTaskMsg.h"
 #include "xiaohu_robot/NodeControlMessage.h"
-
+#include "xiaohu_robot/MappingTaskMessage.h"
+#include "xiaohu_robot/MedicineDeliverySingleTaskMessage.h"
+#include "xiaohu_robot/MedicineDeliveryTasksMessage.h"
 namespace xiaohu_robot {
 inline namespace Foundation {
 inline namespace Typedefs{
@@ -32,6 +35,10 @@ using ObjectMovingTaskMessagePointer = MoveTaskMsg::ConstPtr const&;
 using ObjectDetectionResultMessasgePointer = ObjectDetectionResultMessasge::ConstPtr const&;
 using JoystickMessagePointer = sensor_msgs::Joy::ConstPtr const&;
 using CoordinateMessagePointer = CoordinateMessage::ConstPtr const&;
+using InspectionTasksMessagePointer = InspectionTasksMessage::ConstPtr const&;
+using MappingTaskMessagePointer = MappingTaskMessage::ConstPtr const&;
+using MedicineDeliverySingleTaskMessagePointer = MedicineDeliverySingleTaskMessage::ConstPtr const&;
+using MedicineDeliveryTasksMessagePointer = MedicineDeliveryTasksMessage::ConstPtr const&;
 
 using NodeHandle = ros::NodeHandle;
 using MessagePublisher = ros::Publisher;
