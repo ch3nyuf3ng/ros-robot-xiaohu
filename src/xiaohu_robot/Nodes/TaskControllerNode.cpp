@@ -1,8 +1,11 @@
 #include "xiaohu_robot/Nodes/TaskControllerNode.hpp"
 #include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include "xiaohu_robot/Foundation/VelocityCommand.hpp"
+#include "xiaohu_robot/GeneralTaskMessage.h"
+#include <stdexcept>
 #include <utility>
 
 int main(int argc, char* argv[]) {
@@ -18,7 +21,8 @@ int main(int argc, char* argv[]) {
         CommonConfigs::detectedObjectCoordinatesTopic,
         CommonConfigs::navigationResultTopic,
         CommonConfigs::objectGrabbingResultTopic,
-        CommonConfigs::objectMovingTasksTopic,
+        CommonConfigs::legacyTasksTopic,
+        CommonConfigs::legacyGeneralTasksTopic,
         CommonConfigs::taskStateControlTopic,
         CommonConfigs::speakTextTopic,
         CommonConfigs::messageBufferSize,
@@ -45,7 +49,8 @@ TaskControllerNodeConfigs::TaskControllerNodeConfigs(
     std::string detectedObjectCoordinatesTopic,
     std::string navigationResultTopic,
     std::string objectGrabbingResultTopic,
-    std::string objectMovingTasksTopic,
+    std::string legacyTasksTopic,
+    std::string legacyGeneralTasksTopic,
     std::string taskStateControlTopic,
     std::string speakTextTopic,
     std::size_t messageBufferSize,
@@ -64,7 +69,8 @@ TaskControllerNodeConfigs::TaskControllerNodeConfigs(
     detectedObjectCoordinatesTopic{std::move(detectedObjectCoordinatesTopic)},
     navigationResultTopic{std::move(navigationResultTopic)},
     objectGrabbingResultTopic{std::move(objectGrabbingResultTopic)},
-    objectMovingTasksTopic{std::move(objectMovingTasksTopic)},
+    legacyTasksTopic{std::move(legacyTasksTopic)},
+    legacyGeneralTasksTopic{std::move(legacyGeneralTasksTopic)},
     taskStateControlTopic{std::move(taskStateControlTopic)},
     speakTextTopic{std::move(speakTextTopic)},
     messageBufferSize{messageBufferSize},
@@ -113,10 +119,13 @@ TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
         &TaskControllerNode::whenReceivedObjectGrabResult,
         this
     )},
-    MedicineDeliveryTasksMessageSubscriber{nodeHandle.subscribe<ObjectMovingTaskMessagePointer>(
-        configs.objectMovingTasksTopic,
+    legacyTasksMessageSubscriber{nodeHandle.subscribe<ObjectMovingTaskMessagePointer>(
+        configs.legacyTasksTopic, configs.messageBufferSize, &TaskControllerNode::whenReceivedLegacyTaskRequest, this
+    )},
+    legacyGeneralTasksMessageSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
+        configs.legacyGeneralTasksTopic,
         configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest,
+        &TaskControllerNode::whenReceivedLegacyGeneralTaskRequest,
         this
     )},
     taskStateControlMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
@@ -175,8 +184,8 @@ void TaskControllerNode::run() {
     }
 }
 
-TaskControllerNode::Task TaskControllerNode::getCurrentTask() const {
-    return tasks.front();
+LegacyGeneralTask TaskControllerNode::getCurrentTask() const {
+    return legacyGeneralTasks.front();
 }
 
 TaskControllerNode::TaskState TaskControllerNode::getCurrentTaskState() const {
@@ -225,10 +234,12 @@ void TaskControllerNode::startInitialPositionCalibration() {
 
 void TaskControllerNode::readyToPerformTasks() {
     if (!tasks.empty()) {
-        if (getCurrentTask().pharmacy != "null")
+        if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
             setCurrentTaskState(TaskState::GoingToPharmacy);
-        else
+        else if(getCurrentTask().getTaskType() == TaskType::Inspection)
             setCurrentTaskState(TaskState::GoingToPatient);
+        else
+            throw std::runtime_error{""};
         return;
     }
     incrementTiming();
@@ -248,17 +259,18 @@ void TaskControllerNode::detectMedicine() {
 
 void TaskControllerNode::performingObjectGrab() {
     if (getTiming() == 0_s)
-        delegateObjectGrabbing(getCurrentTask().objectStoragePosition);
+        delegateObjectGrabbing(getCurrentTask().medicinePosition);
     incrementTiming();
 }
 
 void TaskControllerNode::goToPatient() {
     if (getTiming() == 0_s) {
-        if (getCurrentTask().pharmacy != "null")
+        if (getCurrentTask().type == TaskType::MedicineDelivery)
             delegateNavigatingToWaypoint(getCurrentTask().patient);
-        else {
+        else if (getCurrentTask().type == TaskType::Inspection) 
             delegateSpeaking("测温中");
-        }
+        else
+            throw std::runtime_error{""};
     }
     incrementTiming();
 }
@@ -368,7 +380,7 @@ void TaskControllerNode::displayInitializationResult() const {
         detectedObjectCoordinatesMessageSubscriber.getTopic().c_str(),
         navigationResultMessageSubscriber.getTopic().c_str(),
         objectGrabResultMessageSubscriber.getTopic().c_str(),
-        MedicineDeliveryTasksMessageSubscriber.getTopic().c_str(),
+        legacyTasksMessageSubscriber.getTopic().c_str(),
         taskStateControlMessageSubscriber.getTopic().c_str()
     );
 }
@@ -378,7 +390,7 @@ void TaskControllerNode::whenReceivedObjectDetectionResult(ObjectDetectionResult
         displayDetectedObjects(coordinates_ptr);
 
         constexpr std::size_t nearest_object_index{0};
-        getCurrentTask().objectStoragePosition
+        getCurrentTask().medicinePosition
             = {coordinates_ptr->x[nearest_object_index],
                coordinates_ptr->y[nearest_object_index],
                coordinates_ptr->z[nearest_object_index]};
@@ -403,9 +415,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
         }
         else if (getCurrentTaskState() == TaskState::GoingToPatient) {
             ROS_INFO(
-                "Arrived patient: %s (Spent time: %s)",
-                getCurrentTask().patient.c_str(),
-                getTiming().toString().c_str()
+                "Arrived patient: %s (Spent time: %s)", getCurrentTask().patient.c_str(), getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::DeliveringMedicine);
         }
@@ -469,12 +479,19 @@ void TaskControllerNode::whenReceivedObjectGrabResult(StringMessagePointer messa
     }
 }
 
-void TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest(ObjectMovingTaskMessagePointer message_ptr) {
+void TaskControllerNode::whenReceivedLegacyTaskRequest(ObjectMovingTaskMessagePointer message_ptr) {
     tasks.emplace_back(Task{message_ptr->storage_place_name, message_ptr->drop_place_name});
     ROS_INFO(
         "Added task: move an object from %s to %s",
         message_ptr->storage_place_name.c_str(),
         message_ptr->drop_place_name.c_str()
+    );
+}
+
+void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message) {
+    legacyGeneralTasks.emplace_back(LegacyGeneralTask{message});
+    ROS_INFO(
+        "Added a task:\n%s", legacyGeneralTasks.front().toString().c_str()
     );
 }
 

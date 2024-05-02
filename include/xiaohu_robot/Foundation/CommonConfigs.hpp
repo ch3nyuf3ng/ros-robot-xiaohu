@@ -21,7 +21,8 @@ struct CommonConfigs {
     static char const* const speakTextTopic;
 
     static char const* const nodeNamespace;
-    static char const* const objectMovingTasksTopic;
+    static char const* const legacyTasksTopic;
+    static char const* const legacyGeneralTasksTopic;
     static char const* const taskStateControlTopic;
 
     static std::size_t const messageBufferSize;

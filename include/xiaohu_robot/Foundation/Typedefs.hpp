@@ -14,6 +14,7 @@
 #include "std_msgs/String.h"
 #include "wpb_home_behaviors/Coord.h"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/GeneralTaskMessage.h"
 #include "xiaohu_robot/InspectionTasksMessage.h"
 #include "xiaohu_robot/MoveTaskMsg.h"
 #include "xiaohu_robot/NodeControlMessage.h"
@@ -39,6 +40,7 @@ using InspectionTasksMessagePointer = InspectionTasksMessage::ConstPtr const&;
 using MappingTaskMessagePointer = MappingTaskMessage::ConstPtr const&;
 using MedicineDeliverySingleTaskMessagePointer = MedicineDeliverySingleTaskMessage::ConstPtr const&;
 using MedicineDeliveryTasksMessagePointer = MedicineDeliveryTasksMessage::ConstPtr const&;
+using GeneralTaskMessagePointer = GeneralTaskMessage::ConstPtr const&;
 
 using NodeHandle = ros::NodeHandle;
 using MessagePublisher = ros::Publisher;

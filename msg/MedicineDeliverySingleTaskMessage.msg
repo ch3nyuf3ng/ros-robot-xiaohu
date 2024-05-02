@@ -1,3 +1,4 @@
 # MedicineDeliverySingleTaskMessage.msg
 geometry_msgs/Pose pharmacy
 geometry_msgs/Pose patient
+string prescription

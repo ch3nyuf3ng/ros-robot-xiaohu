@@ -142,6 +142,7 @@ add_library(${PROJECT_NAME}_foundation
   src/${PROJECT_NAME}/Foundation/Coordinate.cpp
   src/${PROJECT_NAME}/Foundation/NodeControl.cpp
   src/${PROJECT_NAME}/Foundation/VelocityCommand.cpp
+  src/${PROJECT_NAME}/Foundation/Task.cpp
   src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
 )
 

@@ -49,8 +49,69 @@ std::string MedicineDeliveryTasks::toString() const {
     return oss.str();
 }
 
-SpecificTask::Type MedicineDeliveryTasks::getTaskType() const {
-    return Type::MedicineDeliveryTasks;
+TaskType MedicineDeliveryTasks::getTaskType() const {
+    return TaskType::MedicineDelivery;
+}
+
+LegacyGeneralTask::LegacyGeneralTask(
+    TaskType type,
+    std::string mapName,
+    std::string savePath,
+    std::string pharmacy,
+    std::string patient,
+    std::string prescription,
+    Coordinate medicinePosition
+):
+    type{type},
+    mapName{std::move(mapName)},
+    savePath{std::move(savePath)},
+    pharmacy{std::move(pharmacy)},
+    patient{std::move(patient)},
+    prescription{std::move(prescription)} {}
+
+LegacyGeneralTask::LegacyGeneralTask(GeneralTaskMessagePointer message):
+    type{toType(message->type)},
+    mapName{std::move(message->mapName)},
+    savePath{std::move(message->savePath)},
+    pharmacy{std::move(message->pharmacy)},
+    patient{std::move(message->patient)},
+    prescription{std::move(message->prescription)} {}
+
+std::string LegacyGeneralTask::toString() const {
+    std::ostringstream oss;
+    oss << "LegacyGeneralTask{\n"
+        << "type: " << xiaohu_robot::toString(type) << ",\n"
+        << "mapName: " << (mapName.empty() ? "NULL" : mapName) << ",\n"
+        << "savePath: " << (savePath.empty() ? "NULL" : savePath) << ",\n"
+        << "pharmacy: " << (pharmacy.empty() ? "NULL" : pharmacy) << ",\n"
+        << "patient: " << (patient.empty() ? "NULL" : patient) << ",\n"
+        << "prescription: " << (prescription.empty() ? "NULL" : prescription) << "\n"
+        << "}";
+    return oss.str();
+}
+
+TaskType LegacyGeneralTask::getTaskType() const {
+    return type;
+}
+
+TaskType toType(std::string type) {
+    if (type == "Mapping")
+        return TaskType::Mapping;
+    else if (type == "Inspection")
+        return TaskType::Inspection;
+    else
+        return TaskType::MedicineDelivery;
+}
+
+std::string toString(TaskType type) {
+    switch (type) {
+    case TaskType::Mapping:
+        return "MappingTask";
+    case TaskType::Inspection:
+        return "InspectionTasks";
+    case TaskType::MedicineDelivery:
+        return "MedicineDeliveryTasks";
+    }
 }
 }  // namespace Foundation
 }  // namespace xiaohu_robot

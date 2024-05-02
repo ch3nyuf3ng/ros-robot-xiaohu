@@ -6,19 +6,28 @@
 #include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
+#include <deque>
 #include <string>
-#include <vector>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
+enum struct TaskType {
+    Mapping,
+    Inspection,
+    MedicineDelivery
+};
+
+std::string toString(TaskType);
+TaskType toType(std::string);
+
 struct SpecificTask: public Printable {
     enum struct Type {
-        MappingTask,
-        InspectionTasks,
-        MedicineDeliveryTasks
+        Mapping,
+        Inspection,
+        MedicineDelivery
     };
     ~SpecificTask() = default;
-    virtual Type getTaskType() const = 0;
+    virtual TaskType getTaskType() const = 0;
 };
 
 struct MappingTask final: public SpecificTask {
@@ -28,7 +37,7 @@ struct MappingTask final: public SpecificTask {
     MappingTask(std::string mapName, std::string savePath);
     MappingTask(MappingTaskMessagePointer message);
     std::string toString() const override;
-    Type getTaskType() const override;
+    TaskType getTaskType() const override;
 };
 
 struct InspectionTasks final: public SpecificTask {
@@ -36,7 +45,7 @@ struct InspectionTasks final: public SpecificTask {
 
     InspectionTasks(std::vector<Coordinate> patients);
     std::string toString() const override;
-    Type getTaskType() const override;
+    TaskType getTaskType() const override;
 };
 
 struct MedicineDeliverySingleTask final: public Printable {
@@ -53,7 +62,38 @@ struct MedicineDeliveryTasks final: public SpecificTask {
 
     MedicineDeliveryTasks(MedicineDeliveryTasksMessagePointer);
     std::string toString() const override;
-    Type getTaskType() const override;
+    TaskType getTaskType() const override;
+};
+
+struct LegacyGeneralTask final: public Printable {
+    enum struct Type {
+        Mapping,
+        Inspection,
+        MedicineDelivery
+    };
+
+    TaskType type;
+    std::string mapName;
+    std::string savePath;
+    std::string pharmacy;
+    std::string patient;
+    std::string prescription;
+    Coordinate medicinePosition;
+
+    LegacyGeneralTask(
+        TaskType type,
+        std::string mapName,
+        std::string savePath,
+        std::string pharmacy,
+        std::string patient,
+        std::string prescription,
+        Coordinate medicinePosition
+    );
+
+    LegacyGeneralTask(GeneralTaskMessagePointer);
+
+    std::string toString() const override;
+    TaskType getTaskType() const;
 };
 }  // namespace Foundation
 }  // namespace xiaohu_robot

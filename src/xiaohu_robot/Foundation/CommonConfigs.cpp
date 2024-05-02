@@ -14,7 +14,8 @@ char const* const CommonConfigs::objectGrabbingResultTopic{"/wpb_home/grab_resul
 char const* const CommonConfigs::speakTextTopic{"/xfyun/tts"};
 
 char const* const CommonConfigs::nodeNamespace{"xiaohu_robot"};
-char const* const CommonConfigs::objectMovingTasksTopic{"/xiaohu_robot/ObjectMovingTasks"};
+char const* const CommonConfigs::legacyTasksTopic{"/xiaohu_robot/ObjectMovingTasks"};
+char const* const CommonConfigs::legacyGeneralTasksTopic{"/xiaohu_robot/general_tasks"};
 char const* const CommonConfigs::taskStateControlTopic{"/xiaohu_robot/TaskStateControl"};
 
 std::size_t const CommonConfigs::messageBufferSize{60};

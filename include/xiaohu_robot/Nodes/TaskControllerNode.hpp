@@ -1,5 +1,6 @@
 #pragma once
 
+#include "xiaohu_robot/Foundation/Task.hpp"
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
@@ -21,7 +22,8 @@ struct TaskControllerNodeConfigs final{
     std::string detectedObjectCoordinatesTopic;
     std::string navigationResultTopic;
     std::string objectGrabbingResultTopic;
-    std::string objectMovingTasksTopic;
+    std::string legacyTasksTopic;
+    std::string legacyGeneralTasksTopic;
     std::string taskStateControlTopic;
     std::string speakTextTopic;
     std::size_t messageBufferSize;
@@ -41,7 +43,8 @@ struct TaskControllerNodeConfigs final{
         std::string detectedObjectCoordinatesTopic,
         std::string navigationResultTopic,
         std::string objectGrabbingResultTopic,
-        std::string objectMovingTasksTopic,
+        std::string legacyTasksTopic,
+        std::string legacyGeneralTasksTopic,
         std::string taskStateControlTopic,
         std::string speakTextTopic,
         std::size_t messageBufferSize,
@@ -82,7 +85,7 @@ private:
     struct Task {
         std::string pharmacy;
         std::string patient;
-        Coordinate objectStoragePosition;
+        Coordinate medicinePosition;
     };
 
     NodeHandle nodeHandle;
@@ -90,6 +93,7 @@ private:
     TaskState previousTaskState;
     Duration currentTiming;
     std::deque<Task> tasks;
+    std::deque<LegacyGeneralTask> legacyGeneralTasks;
 
     MessagePublisher const velocityCommandMessagePublisher;
     MessagePublisher const objectDetectionControlMessagePublisher;
@@ -100,12 +104,13 @@ private:
     MessageSubscriber const detectedObjectCoordinatesMessageSubscriber;
     MessageSubscriber const navigationResultMessageSubscriber;
     MessageSubscriber const objectGrabResultMessageSubscriber;
-    MessageSubscriber const MedicineDeliveryTasksMessageSubscriber;
+    MessageSubscriber const legacyGeneralTasksMessageSubscriber;
+    MessageSubscriber const legacyTasksMessageSubscriber;
     MessageSubscriber const taskStateControlMessageSubscriber;
 
     TaskControllerNodeConfigs configs;
 
-    Task getCurrentTask() const;
+    LegacyGeneralTask getCurrentTask() const;
     TaskState getCurrentTaskState() const;
     TaskState getPreviousTaskState() const;
     Duration getTiming() const;
@@ -134,7 +139,8 @@ private:
     void whenReceivedObjectDetectionResult(ObjectDetectionResultMessasgePointer coordinates_ptr);
     void whenReceivedNavigationResult(StringMessagePointer message_ptr);
     void whenReceivedObjectGrabResult(StringMessagePointer message_ptr);
-    void whenReceivedMedicineDeliveryTaskRequest(ObjectMovingTaskMessagePointer message_ptr);
+    void whenReceivedLegacyTaskRequest(ObjectMovingTaskMessagePointer message_ptr);
+    void whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message);
     void whenReceivedStateControlCommand(StringMessagePointer message_ptr);
 
     void delegateControlingRobotVelocity(LinearSpeed target);
