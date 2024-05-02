@@ -178,6 +178,9 @@ void TaskControllerNode::run() {
         case TaskState::WaypointUnreachable:
             waypointUnreachable();
             break;
+        case TaskState::MeasuringTemperature:
+            measuringTemperature();
+            break;
         }
         ros::spinOnce();
         loop_rate.sleep();
@@ -233,7 +236,7 @@ void TaskControllerNode::startInitialPositionCalibration() {
 }
 
 void TaskControllerNode::readyToPerformTasks() {
-    if (!tasks.empty()) {
+    if (!legacyGeneralTasks.empty()) {
         if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
             setCurrentTaskState(TaskState::GoingToPharmacy);
         else if(getCurrentTask().getTaskType() == TaskType::Inspection)
@@ -332,6 +335,18 @@ void TaskControllerNode::waypointUnreachable() {
     }
     else if (getTiming() > 20_s) {
         setCurrentTaskState(getPreviousTaskState());
+        return;
+    }
+    incrementTiming();
+}
+
+void TaskControllerNode::measuringTemperature() {
+    if (getTiming() == 0_s) {
+        delegateSpeaking("测温中。");
+    } else if (getTiming() == 10_s) {
+        delegateSpeaking("测温完成。");
+    } else if (getTiming() == 15_s) {
+        setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
     incrementTiming();

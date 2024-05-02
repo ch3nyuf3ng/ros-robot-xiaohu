@@ -69,6 +69,7 @@ private:
         DetectingMedicine,
         PerformingObjectGrab,
         GoingToPatient,
+        MeasuringTemperature,
         DeliveringMedicine,
         MovingBackward,
         RetractingTheArm,
@@ -131,6 +132,7 @@ private:
     void haveFinishedPreviousTask();
     void goToBaseStation();
     void waypointUnreachable();
+    void measuringTemperature();
 
     void showTasks() const;
     void showTiming() const;
