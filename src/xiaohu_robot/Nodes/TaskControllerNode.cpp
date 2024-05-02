@@ -221,10 +221,12 @@ void TaskControllerNode::resetTiming() {
 };
 
 void TaskControllerNode::startInitialPositionCalibration() {
-    if (getTiming() == 0_s)
+    if (getTiming() == 0_s) {
         ROS_INFO(
             "Please estimate initial position in %f seconds.", configs.initialPositionCalibrationTime.getBaseUnitValue()
         );
+        delegateSpeaking("请先校准初始位置。");
+    }
     else if (getTiming() > configs.initialPositionCalibrationTime) {
         setCurrentTaskState(TaskState::ReadyToPerformTasks);
         return;
@@ -312,11 +314,9 @@ void TaskControllerNode::haveFinishedPreviousTask() {
             getCurrentTask().pharmacy.c_str(),
             getCurrentTask().patient.c_str()
         );
-    } else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
-        ROS_INFO(
-            "Have finished the previous inspection task (%s).",
-            getCurrentTask().patient.c_str()
-        );
+    }
+    else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
+        ROS_INFO("Have finished the previous inspection task (%s).", getCurrentTask().patient.c_str());
     }
     legacyGeneralTasks.pop_front();
     showTasks();
@@ -347,10 +347,10 @@ void TaskControllerNode::measuringTemperature() {
     if (getTiming() == 0_s) {
         delegateSpeaking("测温中。");
     }
-    else if (getTiming() == 10_s) {
+    else if (getTiming() >= 10_s && getTiming() <= 10_s + configs.stateCheckingFrequency.perCycleTime()) {
         delegateSpeaking("测温完成。");
     }
-    else if (getTiming() == 15_s) {
+    else if (getTiming() >= 15_s) {
         setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
