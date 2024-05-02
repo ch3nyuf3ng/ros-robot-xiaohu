@@ -133,6 +133,7 @@ TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
     )},
     configs{std::move(configs)} {
     displayInitializationResult();
+    sleep(1);
 }
 
 void TaskControllerNode::run() {
@@ -344,17 +345,20 @@ void TaskControllerNode::waypointUnreachable() {
 }
 
 void TaskControllerNode::measuringTemperature() {
+    static bool haveSpoken = false;
     if (getTiming() == 0_s) {
         delegateSpeaking("测温中。");
     }
-    else if (getTiming() > 10_s - configs.stateCheckingFrequency.perCycleTime()
-             && getTiming() < 10_s + configs.stateCheckingFrequency.perCycleTime()) {
+    else if (getTiming() > 10_s && !haveSpoken) {
         delegateSpeaking("测温完成。");
+        haveSpoken = true;
     }
     else if (getTiming() >= 15_s) {
+        haveSpoken = false;
         setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
+    showTiming();
     incrementTiming();
 }
 
