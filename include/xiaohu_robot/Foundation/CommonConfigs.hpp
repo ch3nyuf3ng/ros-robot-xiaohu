@@ -19,6 +19,7 @@ struct CommonConfigs {
     static char const* const navigationResultTopic;
     static char const* const objectGrabbingResultTopic;
     static char const* const speakTextTopic;
+    static char const* const moveBaseTopic;
 
     static char const* const nodeNamespace;
     static char const* const legacyTasksTopic;

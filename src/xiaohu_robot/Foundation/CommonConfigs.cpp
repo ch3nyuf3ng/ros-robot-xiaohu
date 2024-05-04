@@ -12,6 +12,7 @@ char const* const CommonConfigs::detectedObjectCoordinatesTopic{"/wpb_home/objec
 char const* const CommonConfigs::navigationResultTopic{"/waterplus/navi_result"};
 char const* const CommonConfigs::objectGrabbingResultTopic{"/wpb_home/grab_result"};
 char const* const CommonConfigs::speakTextTopic{"/xfyun/tts"};
+char const* const CommonConfigs::moveBaseTopic{"move_base"};
 
 char const* const CommonConfigs::nodeNamespace{"xiaohu_robot"};
 char const* const CommonConfigs::legacyTasksTopic{"/xiaohu_robot/ObjectMovingTasks"};

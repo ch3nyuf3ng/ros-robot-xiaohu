@@ -26,6 +26,7 @@ struct TaskControllerNodeConfigs final {
     std::string legacyGeneralTasksTopic;
     std::string taskStateControlTopic;
     std::string speakTextTopic;
+    std::string moveBaseTopic;
     std::size_t messageBufferSize;
     std::string nodeNamespace;
     Frequency stateCheckingFrequency;
@@ -47,6 +48,7 @@ struct TaskControllerNodeConfigs final {
         std::string legacyGeneralTasksTopic,
         std::string taskStateControlTopic,
         std::string speakTextTopic,
+        std::string moveBaseTopic,
         std::size_t messageBufferSize,
         std::string nodeNamespace,
         Frequency stateCheckingFrequency,
@@ -100,6 +102,7 @@ private:
     MessageSubscriber const objectGrabResultMessageSubscriber;
     MessageSubscriber const legacyGeneralTasksMessageSubscriber;
     MessageSubscriber const taskStateControlMessageSubscriber;
+    NavigationClient navigationClient;
 
     TaskControllerNodeConfigs configs;
 
@@ -125,6 +128,8 @@ private:
     void goToBaseStation();
     void waypointUnreachable();
     void measuringTemperature();
+
+    void startNextTask();
 
     void showTasks() const;
     void showTiming() const;

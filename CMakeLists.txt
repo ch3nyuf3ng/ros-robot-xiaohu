@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   wpb_home_behaviors
   message_generation
+  actionlib
+  move_base_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -116,10 +118,13 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     sensor_msgs
+    geometry_msgs
     std_msgs
     message_runtime
     waterplus_map_tools
     wpb_home_behaviors
+    actionlib
+    move_base_msgs
 # DEPENDS system_lib
 )
 

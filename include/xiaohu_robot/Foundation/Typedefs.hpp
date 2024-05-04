@@ -3,8 +3,10 @@
 #ifndef XIAOHU_ROBOT_FOUNDATION_TYPE_HPP
 #define XIAOHU_ROBOT_FOUNDATION_TYPE_HPP
 
+#include "actionlib/client/simple_action_client.h"
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/Twist.h"
+#include "move_base_msgs/MoveBaseAction.h"
 #include "ros/node_handle.h"
 #include "ros/publisher.h"
 #include "ros/rate.h"
@@ -19,7 +21,6 @@
 #include "xiaohu_robot/MappingTaskMessage.h"
 #include "xiaohu_robot/MedicineDeliverySingleTaskMessage.h"
 #include "xiaohu_robot/MedicineDeliveryTasksMessage.h"
-#include "xiaohu_robot/MoveTaskMsg.h"
 #include "xiaohu_robot/NodeControlMessage.h"
 
 namespace xiaohu_robot {
@@ -33,7 +34,6 @@ using ObjectDetectionResultMessasge = wpb_home_behaviors::Coord;
 
 using StringMessagePointer = StringMessage::ConstPtr const&;
 using NodeControlMessagePointer = NodeControlMessage::ConstPtr const&;
-using ObjectMovingTaskMessagePointer = MoveTaskMsg::ConstPtr const&;
 using ObjectDetectionResultMessasgePointer = ObjectDetectionResultMessasge::ConstPtr const&;
 using JoystickMessagePointer = sensor_msgs::Joy::ConstPtr const&;
 using CoordinateMessagePointer = CoordinateMessage::ConstPtr const&;
@@ -53,6 +53,8 @@ using Duration = Measurement<UnitDuration>;
 using Frequency = Measurement<UnitFrequency>;
 using LinearSpeed = Measurement<UnitSpeed>;
 using AngularSpeed = Measurement<UnitAngularSpeed>;
+
+using NavigationClient = actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>;
 }  // namespace Typedefs
 }  // namespace Foundation
 }  // namespace xiaohu_robot

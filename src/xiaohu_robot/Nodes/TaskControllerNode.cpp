@@ -25,11 +25,12 @@ int main(int argc, char* argv[]) {
         CommonConfigs::legacyGeneralTasksTopic,
         CommonConfigs::taskStateControlTopic,
         CommonConfigs::speakTextTopic,
+        CommonConfigs::moveBaseTopic,
         CommonConfigs::messageBufferSize,
         CommonConfigs::nodeNamespace,
         CommonConfigs::stateCheckingFrequency,
         10_s,
-        10_cm,
+        5_cm,
         true
     };
     TaskControllerNode taskControllerNode{taskControllerNodeConfig};
@@ -53,6 +54,7 @@ TaskControllerNodeConfigs::TaskControllerNodeConfigs(
     std::string legacyGeneralTasksTopic,
     std::string taskStateControlTopic,
     std::string speakTextTopic,
+    std::string moveBaseTopic,
     std::size_t messageBufferSize,
     std::string nodeNamespace,
     Frequency stateCheckingFrequency,
@@ -73,6 +75,7 @@ TaskControllerNodeConfigs::TaskControllerNodeConfigs(
     legacyGeneralTasksTopic{std::move(legacyGeneralTasksTopic)},
     taskStateControlTopic{std::move(taskStateControlTopic)},
     speakTextTopic{std::move(speakTextTopic)},
+    moveBaseTopic{std::move(moveBaseTopic)},
     messageBufferSize{messageBufferSize},
     nodeNamespace{std::move(nodeNamespace)},
     stateCheckingFrequency{std::move(stateCheckingFrequency)},
@@ -131,6 +134,7 @@ TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
         &TaskControllerNode::whenReceivedStateControlCommand,
         this
     )},
+    navigationClient{configs.moveBaseTopic},
     configs{std::move(configs)} {
     displayInitializationResult();
     sleep(1);
@@ -226,7 +230,7 @@ void TaskControllerNode::startInitialPositionCalibration() {
         ROS_INFO(
             "Please estimate initial position in %f seconds.", configs.initialPositionCalibrationTime.getBaseUnitValue()
         );
-        delegateSpeaking("请先校准初始位置。");
+        delegateSpeaking("请确认机器人初始位置位于充电基站。");
     }
     else if (getTiming() > configs.initialPositionCalibrationTime) {
         setCurrentTaskState(TaskState::ReadyToPerformTasks);
@@ -325,18 +329,13 @@ void TaskControllerNode::haveFinishedPreviousTask() {
     else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
         ROS_INFO("Have finished the previous inspection task (%s).", getCurrentTask().patient.c_str());
     }
+    else {
+        throw std::runtime_error{""};
+    }
     legacyGeneralTasks.pop_front();
     showTasks();
     if (!legacyGeneralTasks.empty()) {
-        if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
-            setCurrentTaskState(TaskState::GoingToPharmacy);
-        }
-        else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
-            setCurrentTaskState(TaskState::GoingToPatient);
-        }
-        else {
-            throw std::runtime_error{""};
-        }
+        startNextTask();
     }
     else {
         setCurrentTaskState(TaskState::GoingToBaseStation);
@@ -344,8 +343,20 @@ void TaskControllerNode::haveFinishedPreviousTask() {
 }
 
 void TaskControllerNode::goToBaseStation() {
+    static bool isCancelled{false};
+    static Duration cancellationTime{0_s};
     if (getTiming() == 0_s)
         delegateNavigatingToWaypoint(configs.baseStationName);
+    if (!legacyGeneralTasks.empty() && !isCancelled) {
+        navigationClient.cancelAllGoals();
+        cancellationTime = getTiming();
+        isCancelled = true;
+    }
+    else if (isCancelled && getTiming() - cancellationTime > 2_s){
+        startNextTask();
+        isCancelled = false;
+        return;
+    }
     incrementTiming();
 }
 
@@ -364,17 +375,18 @@ void TaskControllerNode::measuringTemperature() {
     static bool haveSpoken = false;
     if (getTiming() == 0_s) {
         delegateSpeaking("测温中。");
+        ROS_INFO("Start measuring temperature.");
     }
-    else if (getTiming() > 10_s && !haveSpoken) {
-        delegateSpeaking("测温完成。");
+    else if (getTiming() > 5_s && !haveSpoken) {
+        delegateSpeaking("测温完成。体温正常。");
         haveSpoken = true;
     }
-    else if (getTiming() >= 15_s) {
+    else if (getTiming() >= 10_s) {
         haveSpoken = false;
         setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
-    showTiming();
+    // showTiming();
     incrementTiming();
 }
 
@@ -424,6 +436,18 @@ void TaskControllerNode::displayInitializationResult() const {
         legacyGeneralTasksMessageSubscriber.getTopic().c_str(),
         taskStateControlMessageSubscriber.getTopic().c_str()
     );
+}
+
+void TaskControllerNode::startNextTask() {
+    if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
+        setCurrentTaskState(TaskState::GoingToPharmacy);
+    }
+    else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
+        setCurrentTaskState(TaskState::GoingToPatient);
+    }
+    else {
+        throw std::runtime_error{""};
+    }
 }
 
 void TaskControllerNode::whenReceivedObjectDetectionResult(ObjectDetectionResultMessasgePointer coordinates_ptr) {
@@ -496,7 +520,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
         }
-        else if (getCurrentTaskState() == TaskState::GoingToBaseStation) {
+        else if (getCurrentTaskState() == TaskState::GoingToBaseStation && legacyGeneralTasks.empty()) {
             ROS_INFO(
                 "Failed to arrive base station: %s (Spent time: %s)",
                 configs.baseStationName.c_str(),
@@ -589,7 +613,7 @@ void TaskControllerNode::delegateObjectGrabbing(Coordinate coordinate) {
 
 void TaskControllerNode::delegateSpeaking(std::string content) {
     std::printf(
-        "Notified subscriber of %s to speak %s.", speakTextMessagePublisher.getTopic().c_str(), content.c_str()
+        "Notified subscriber of %s to speak %s.\n", speakTextMessagePublisher.getTopic().c_str(), content.c_str()
     );
     StringMessage message;
     message.data = content;
