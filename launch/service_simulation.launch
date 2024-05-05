@@ -53,7 +53,7 @@
 
   <!-- Spawn a robot into Gazebo -->
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
-    args="-file $(find wpr_simulation)/models/wpb_home_mani.model -urdf -x -0.0270498 -y -3.37887 -Y 0.706908 -W 0.707306 -model wpb_home_mani" />
+    args="-file $(find wpr_simulation)/models/wpb_home_mani.model -urdf -x -0.0270498 -y -3.37887 -Y 1.57 -model wpb_home_mani" />
 
   <!-- load the controllers of WPB_HOME -->
   <include file="$(find wpr_simulation)/launch/wpb_home_controllers.launch" />
