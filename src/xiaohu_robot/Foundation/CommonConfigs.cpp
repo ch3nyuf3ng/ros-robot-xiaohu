@@ -20,6 +20,6 @@ std::string const CommonConfigs::legacyGeneralTasksTopic{nodeNamespace + "/gener
 std::string const CommonConfigs::initPositionWithCoordinateTopic{nodeNamespace + "/init_position"};
 std::string const CommonConfigs::baseStationName{"base"};
 
-std::size_t const CommonConfigs::messageBufferSize{60};
-Frequency const CommonConfigs::loopFrequency{60_Hz};
+std::size_t const CommonConfigs::messageBufferSize{10};
+Frequency const CommonConfigs::loopFrequency{10_Hz};
 }  // namespace xiaohu_robot

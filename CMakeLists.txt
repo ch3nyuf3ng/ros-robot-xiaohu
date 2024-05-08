@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   move_base_msgs
   sound_play
+  tf
+  nav_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -173,35 +175,24 @@ add_executable(${PROJECT_NAME}_task_controller_node
   src/${PROJECT_NAME}/Nodes/TaskControllerNode.cpp
 )
 
-add_executable(${PROJECT_NAME}_init_position_node
-  src/${PROJECT_NAME}/Nodes/InitPositionNode.cpp
+add_dependencies(${PROJECT_NAME}_task_controller_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
 )
 
-add_executable(xfyun_tts_node
-  src/xfyun/tts_node.cpp
-)
-
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
 set_target_properties(${PROJECT_NAME}_task_controller_node
   PROPERTIES
     OUTPUT_NAME task_controller_node
     PREFIX ""
 )
 
-set_target_properties(${PROJECT_NAME}_init_position_node
-  PROPERTIES
-    OUTPUT_NAME init_position_node
-    PREFIX ""
+target_link_libraries(${PROJECT_NAME}_task_controller_node
+  ${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
 )
 
-## Add cmake target dependencies of the executable
-## same as for the library above
-add_dependencies(${PROJECT_NAME}_task_controller_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
+add_executable(${PROJECT_NAME}_init_position_node
+  src/${PROJECT_NAME}/Nodes/InitPositionNode.cpp
 )
 
 add_dependencies(${PROJECT_NAME}_init_position_node
@@ -209,15 +200,11 @@ add_dependencies(${PROJECT_NAME}_init_position_node
   ${catkin_EXPORTED_TARGETS}
 )
 
-add_dependencies(xfyun_tts_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
 
-## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_task_controller_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
+set_target_properties(${PROJECT_NAME}_init_position_node
+  PROPERTIES
+    OUTPUT_NAME init_position_node
+    PREFIX ""
 )
 
 target_link_libraries(${PROJECT_NAME}_init_position_node
@@ -225,10 +212,31 @@ target_link_libraries(${PROJECT_NAME}_init_position_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(xfyun_tts_node
+  src/xfyun/tts_node.cpp
+)
+
+add_dependencies(xfyun_tts_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
 target_link_libraries(xfyun_tts_node
    ${sound_libs} 
 )
 
+add_executable(core_sim_node
+  src/wpr_simulation/core_sim_node.cpp
+)
+
+add_dependencies(core_sim_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(core_sim_node
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############

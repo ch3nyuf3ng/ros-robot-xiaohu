@@ -39,7 +39,7 @@ TebLocalPlannerROS:
         vertices: [[0.35, 0.0], [-0.2, -0.25], [0.2, -0.25]]
 
     # 到达目标点的判断容差
-    xy_goal_tolerance: 0.4
+    xy_goal_tolerance: 0.1
     yaw_goal_tolerance: 0.1
 
     # 障碍物相关

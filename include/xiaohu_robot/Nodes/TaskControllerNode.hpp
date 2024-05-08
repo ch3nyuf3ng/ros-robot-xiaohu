@@ -16,7 +16,6 @@ inline namespace Nodes {
 class TaskControllerNode final: public Runnable {
 public:
     struct Config final {
-        Length heightCompensation;
         Duration initialPositionCalibrationTime;
         std::string baseStationName;
         std::string velocityCommandTopic;
@@ -33,7 +32,6 @@ public:
         NodeBasicConfig nodeBasicConfig;
 
         Config(
-            Length heightCompensation,
             Duration initialPositionCalibrationTime,
             std::string baseStationName = CommonConfigs::baseStationName,
             std::string velocityCommandTopic = CommonConfigs::velocityCommandTopic,

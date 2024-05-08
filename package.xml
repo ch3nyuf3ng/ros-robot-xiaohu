@@ -24,7 +24,6 @@
   <!-- Authors do not have to be maintainers, but could be -->
   <!-- Example: -->
   <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
-  <author email="21371476@buaa.edu.cn">Yang Hesen</author>
 
   <!-- The *depend tags are used to specify dependencies -->
   <!-- Dependencies can be catkin packages or system dependencies -->
@@ -55,14 +54,6 @@
   <build_depend>message_generation</build_depend>
   <build_depend>actionlib</build_depend>
   <build_depend>move_base_msgs</build_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>sensor_msgs</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-  <build_export_depend>geometry_msgs</build_export_depend>
-  <build_export_depend>wpb_home_behaviors</build_export_depend>
-  <build_export_depend>message_runtime</build_export_depend>
-  <build_export_depend>move_base_msgs</build_export_depend>
-  <build_export_depend>actionlib</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>

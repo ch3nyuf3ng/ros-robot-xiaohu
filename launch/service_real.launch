@@ -5,7 +5,6 @@
     <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
     <include file="$(find xiaohu_robot)/rviz/rviz.launch" />
     <include file="$(find xiaohu_robot)/navigation/integration.launch" />
-    <include file="$(find xiaohu_robot)/manipulator/manipulator_simulation.launch" />
     <include file="$(find xiaohu_robot)/lidar/rplidar.launch" />
     <include file="$(find xiaohu_robot)/lidar/filter.launch" />
     <include file="$(find xiaohu_robot)/functions/object_detect.launch" />

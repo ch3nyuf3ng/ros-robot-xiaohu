@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
 
     ros::init(argc, argv, "task_ctrl_node");
-    TaskControllerNode taskControllerNode{TaskControllerNode::Config{5_cm, 10_s}};
+    TaskControllerNode taskControllerNode{TaskControllerNode::Config{10_s}};
     taskControllerNode.run();
 
     return 0;
@@ -21,7 +21,6 @@ int main(int argc, char* argv[]) {
 namespace xiaohu_robot {
 inline namespace Nodes {
 TaskControllerNode::Config::Config(
-    Length heightCompensation,
     Duration initialPositionCalibrationTime,
     std::string baseStationName,
     std::string velocityCommandTopic,
@@ -37,7 +36,6 @@ TaskControllerNode::Config::Config(
     std::string moveBaseTopic,
     NodeBasicConfig nodeBasicConfig
 ):
-    heightCompensation{std::move(heightCompensation)},
     initialPositionCalibrationTime{std::move(initialPositionCalibrationTime)},
     baseStationName{std::move(baseStationName)},
     velocityCommandTopic{std::move(velocityCommandTopic)},
@@ -246,6 +244,7 @@ void TaskControllerNode::deliverMedicine() {
     }
     else if (nodeTiming.getTiming() > 20_s) {
         setCurrentTaskState(TaskState::MovingBackward);
+        haveDropped = false;
         return;
     }
     nodeTiming.incrementTiming();
@@ -412,7 +411,7 @@ void TaskControllerNode::whenReceivedObjectDetectionResult(ObjectDetectionResult
         Coordinate coord{
             coordinates_ptr->x[nearest_object_index],
             coordinates_ptr->y[nearest_object_index],
-            coordinates_ptr->z[nearest_object_index] + configs.heightCompensation.getBaseUnitValue()
+            coordinates_ptr->z[nearest_object_index]
         };
         getCurrentTask().medicinePosition = coord;
         ROS_INFO("temp coordinate:\n%s", coord.toString().c_str());
