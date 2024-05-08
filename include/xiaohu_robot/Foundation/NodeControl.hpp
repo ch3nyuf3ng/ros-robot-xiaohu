@@ -3,52 +3,41 @@
 #ifndef XIAOHU_ROBOT_FOUNDATION_NODE_CONTROL_HPP
 #define XIAOHU_ROBOT_FOUNDATION_NODE_CONTROL_HPP
 
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
+#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
-#include <string>
+#include <cstddef>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-enum struct NodeState {
-    idle,
-    running
-};
-
-struct NodeControlBehavior {
-    std::string const static pause;
-    std::string const static resume;
-};
-
-struct NodeRunnable {
-    virtual ~NodeRunnable() = default;
+struct Runnable {
+    virtual ~Runnable() = default;
     virtual void run() = 0;
-
-protected:
-    virtual Frequency getCheckStateFrequency() const = 0;
-    virtual Duration getTiming() const = 0;
-    virtual void setTiming(Duration) = 0;
-    virtual void incrementTiming() = 0;
-    virtual void resetTiming() = 0;
 };
 
-struct NodeControllable: public NodeRunnable {
-    virtual ~NodeControllable() = default;
+struct NodeBasicConfig final: public Printable {
+    std::string nodeNamespace;
+    std::size_t messageBufferSize;
+    Frequency loopFrequency;
 
-protected:
-    virtual NodeState getNodeState() const = 0;
-    virtual void setNodeState(NodeState) = 0;
-    virtual void onReceiveNodeControlMessage(NodeControlMessagePointer) = 0;
-    virtual void whenIsRunning() = 0;
-    virtual void whenIsIdle() = 0;
+    NodeBasicConfig(
+        std::string nodeNamespace = CommonConfigs::nodeNamespace,
+        std::size_t messageBufferSize = CommonConfigs::messageBufferSize,
+        Frequency loopFrequency = CommonConfigs::loopFrequency
+    );
+    std::string toString() const override;
 };
 
-struct EnableNodeControl: public NodeControllable {
-    virtual ~EnableNodeControl() = default;
-    void run() final;
+struct NodeTiming final {
+    NodeTiming(NodeBasicConfig const& nodeBasicConfig);
+    Duration getTiming() const;
+    void setTiming(Duration);
+    void incrementTiming();
+    void resetTiming();
 
-protected:
-    void incrementTiming() final;
-    void resetTiming() final;
-    void onReceiveNodeControlMessage(NodeControlMessagePointer) final;
+private:
+    Duration timing;
+    NodeBasicConfig const& nodeBasicConfig;
 };
 }  // namespace Foundation
 }  // namespace xiaohu_robot

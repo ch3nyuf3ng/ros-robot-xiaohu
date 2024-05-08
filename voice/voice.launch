@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="xiaohu_robot" type="xfyun_tts_node" name="xfyun_tts_node" />
+    <node pkg="sound_play" type="soundplay_node.py" name="soundplay_node" />
+</launch>

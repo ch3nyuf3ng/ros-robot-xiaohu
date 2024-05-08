@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="wpb_home_behaviors" type="wpb_home_grab_server" name="wpb_home_grab_server" />
+    <node pkg="wpb_home_behaviors" type="wpb_home_grab_action" name="wpb_home_grab_action">
+        <rosparam file="$(find xiaohu_robot)/manipulator/params/compensation.yaml" command="load" />
+    </node>
+</launch>

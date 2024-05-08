@@ -1,0 +1,16 @@
+<launch>
+    <include file="$(find xiaohu_robot)/maps/load_map.launch">
+        <arg name="map_info" value="$(find xiaohu_robot)/maps/real/map.yaml" />
+    </include>
+    <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
+    <include file="$(find xiaohu_robot)/rviz/rviz.launch" />
+    <include file="$(find xiaohu_robot)/navigation/integration.launch" />
+    <include file="$(find xiaohu_robot)/manipulator/manipulator_simulation.launch" />
+    <include file="$(find xiaohu_robot)/lidar/rplidar.launch" />
+    <include file="$(find xiaohu_robot)/lidar/filter.launch" />
+    <include file="$(find xiaohu_robot)/functions/object_detect.launch" />
+    <include file="$(find xiaohu_robot)/functions/object_grab.launch" />
+    <include file="$(find xiaohu_robot)/vision/kinect.launch" />
+    <include file="$(find xiaohu_robot)/voice/voice.launch" />
+    <include file="$(find xiaohu_robot)/launch/xiaohu_nodes.launch" />
+</launch>

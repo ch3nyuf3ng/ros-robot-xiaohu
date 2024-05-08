@@ -1,6 +1,6 @@
 #include "xiaohu_robot/Nodes/TaskControllerNode.hpp"
-#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/Foundation/NodeControl.hpp"
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include "xiaohu_robot/Foundation/VelocityCommand.hpp"
@@ -10,37 +10,19 @@
 
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
+
     ros::init(argc, argv, "task_ctrl_node");
-    TaskControllerNodeConfigs taskControllerNodeConfig{
-        CommonConfigs::baseStationName,
-        CommonConfigs::velocityCommandTopic,
-        CommonConfigs::objectDetectionControlTopic,
-        CommonConfigs::navigationWaypointTopic,
-        CommonConfigs::grabObjectCoodinateTopic,
-        CommonConfigs::manipulatorControlTopic,
-        CommonConfigs::detectedObjectCoordinatesTopic,
-        CommonConfigs::navigationResultTopic,
-        CommonConfigs::objectGrabbingResultTopic,
-        CommonConfigs::legacyTasksTopic,
-        CommonConfigs::legacyGeneralTasksTopic,
-        CommonConfigs::taskStateControlTopic,
-        CommonConfigs::speakTextTopic,
-        CommonConfigs::moveBaseTopic,
-        CommonConfigs::messageBufferSize,
-        CommonConfigs::nodeNamespace,
-        CommonConfigs::stateCheckingFrequency,
-        10_s,
-        5_cm,
-        true
-    };
-    TaskControllerNode taskControllerNode{taskControllerNodeConfig};
+    TaskControllerNode taskControllerNode{TaskControllerNode::Config{5_cm, 10_s}};
     taskControllerNode.run();
+
     return 0;
 }
 
 namespace xiaohu_robot {
 inline namespace Nodes {
-TaskControllerNodeConfigs::TaskControllerNodeConfigs(
+TaskControllerNode::Config::Config(
+    Length heightCompensation,
+    Duration initialPositionCalibrationTime,
     std::string baseStationName,
     std::string velocityCommandTopic,
     std::string objectDetectionControlTopic,
@@ -50,18 +32,13 @@ TaskControllerNodeConfigs::TaskControllerNodeConfigs(
     std::string detectedObjectCoordinatesTopic,
     std::string navigationResultTopic,
     std::string objectGrabbingResultTopic,
-    std::string legacyTasksTopic,
     std::string legacyGeneralTasksTopic,
-    std::string taskStateControlTopic,
     std::string speakTextTopic,
     std::string moveBaseTopic,
-    std::size_t messageBufferSize,
-    std::string nodeNamespace,
-    Frequency stateCheckingFrequency,
-    Duration initialPositionCalibrationTime,
-    Length heightCompensation,
-    bool hasManipulator
+    NodeBasicConfig nodeBasicConfig
 ):
+    heightCompensation{std::move(heightCompensation)},
+    initialPositionCalibrationTime{std::move(initialPositionCalibrationTime)},
     baseStationName{std::move(baseStationName)},
     velocityCommandTopic{std::move(velocityCommandTopic)},
     objectDetectionControlTopic{std::move(objectDetectionControlTopic)},
@@ -71,77 +48,66 @@ TaskControllerNodeConfigs::TaskControllerNodeConfigs(
     detectedObjectCoordinatesTopic{std::move(detectedObjectCoordinatesTopic)},
     navigationResultTopic{std::move(navigationResultTopic)},
     objectGrabbingResultTopic{std::move(objectGrabbingResultTopic)},
-    legacyTasksTopic{std::move(legacyTasksTopic)},
     legacyGeneralTasksTopic{std::move(legacyGeneralTasksTopic)},
-    taskStateControlTopic{std::move(taskStateControlTopic)},
     speakTextTopic{std::move(speakTextTopic)},
-    moveBaseTopic{std::move(moveBaseTopic)},
-    messageBufferSize{messageBufferSize},
-    nodeNamespace{std::move(nodeNamespace)},
-    stateCheckingFrequency{std::move(stateCheckingFrequency)},
-    initialPositionCalibrationTime{std::move(initialPositionCalibrationTime)},
-    heightCompensation{std::move(heightCompensation)},
-    hasManipulator{hasManipulator} {}
+    moveBaseTopic{std::move(moveBaseTopic)} {
+    sleep(1);
+}
 
-TaskControllerNode::TaskControllerNode(TaskControllerNodeConfigs configs):
-    nodeHandle{configs.nodeNamespace},
+TaskControllerNode::TaskControllerNode(Config configs):
+    configs{std::move(configs)},
+    nodeHandle{},
+    nodeTiming{this->configs.nodeBasicConfig},
     currentTaskState{TaskState::CalibratingInitialPosition},
     previousTaskState{TaskState::ReadyToPerformTasks},
-    currentTiming{0_s},
-    velocityCommandMessagePublisher{
-        nodeHandle.advertise<VelocityCommandMessage>(configs.velocityCommandTopic, configs.messageBufferSize)
-    },
-    objectDetectionControlMessagePublisher{
-        nodeHandle.advertise<StringMessage>(configs.objectDetectionControlTopic, configs.messageBufferSize)
-    },
-    navigationWaypointMessagePublisher{
-        nodeHandle.advertise<StringMessage>(configs.navigationWaypointTopic, configs.messageBufferSize)
-    },
-    objectGrabbingCoodinateMessagePublisher{
-        nodeHandle.advertise<CoordinateMessage>(configs.objectGrabbingCoordinateTopic, configs.messageBufferSize)
-    },
-    manipulatiorControlMessagePublisher{
-        nodeHandle.advertise<ManipulatorControlMessage>(configs.manipulatorControlTopic, configs.messageBufferSize)
-    },
-    speakTextMessagePublisher{nodeHandle.advertise<StringMessage>(configs.speakTextTopic, configs.messageBufferSize)},
+    velocityCommandMessagePublisher{nodeHandle.advertise<VelocityCommandMessage>(
+        this->configs.velocityCommandTopic, this->configs.nodeBasicConfig.messageBufferSize
+    )},
+    objectDetectionControlMessagePublisher{nodeHandle.advertise<StringMessage>(
+        this->configs.objectDetectionControlTopic, this->configs.nodeBasicConfig.messageBufferSize
+    )},
+    navigationWaypointMessagePublisher{nodeHandle.advertise<StringMessage>(
+        this->configs.navigationWaypointTopic, this->configs.nodeBasicConfig.messageBufferSize
+    )},
+    objectGrabbingCoodinateMessagePublisher{nodeHandle.advertise<CoordinateMessage>(
+        this->configs.objectGrabbingCoordinateTopic, this->configs.nodeBasicConfig.messageBufferSize
+    )},
+    manipulatiorControlMessagePublisher{nodeHandle.advertise<ManipulatorControlMessage>(
+        this->configs.manipulatorControlTopic, this->configs.nodeBasicConfig.messageBufferSize
+    )},
+    speakTextMessagePublisher{nodeHandle.advertise<StringMessage>(
+        this->configs.speakTextTopic, this->configs.nodeBasicConfig.messageBufferSize
+    )},
     detectedObjectCoordinatesMessageSubscriber{nodeHandle.subscribe<ObjectDetectionResultMessasgePointer>(
-        configs.detectedObjectCoordinatesTopic,
-        configs.messageBufferSize,
+        this->configs.detectedObjectCoordinatesTopic,
+        this->configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedObjectDetectionResult,
         this
     )},
     navigationResultMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        configs.navigationResultTopic,
-        configs.messageBufferSize,
+        this->configs.navigationResultTopic,
+        this->configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedNavigationResult,
         this
     )},
     objectGrabResultMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        configs.objectGrabbingResultTopic,
-        configs.messageBufferSize,
+        this->configs.objectGrabbingResultTopic,
+        this->configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedObjectGrabResult,
         this
     )},
     legacyGeneralTasksMessageSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
-        configs.legacyGeneralTasksTopic,
-        configs.messageBufferSize,
+        this->configs.legacyGeneralTasksTopic,
+        this->configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedLegacyGeneralTaskRequest,
         this
     )},
-    taskStateControlMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        configs.taskStateControlTopic,
-        configs.messageBufferSize,
-        &TaskControllerNode::whenReceivedStateControlCommand,
-        this
-    )},
-    navigationClient{configs.moveBaseTopic},
-    configs{std::move(configs)} {
+    navigationClient{this->configs.moveBaseTopic} {
     displayInitializationResult();
-    sleep(1);
 }
 
 void TaskControllerNode::run() {
-    ros::Rate loop_rate{configs.stateCheckingFrequency};
+    ros::Rate loop_rate{configs.nodeBasicConfig.loopFrequency};
     while (ros::ok()) {
         switch (getCurrentTaskState()) {
         case TaskState::CalibratingInitialPosition:
@@ -201,12 +167,8 @@ TaskControllerNode::TaskState TaskControllerNode::getPreviousTaskState() const {
     return previousTaskState;
 }
 
-Duration TaskControllerNode::getTiming() const {
-    return currentTiming;
-}
-
 void TaskControllerNode::setCurrentTaskState(TaskState nextState) {
-    resetTiming();
+    nodeTiming.resetTiming();
     auto oldState = currentTaskState;
     currentTaskState = nextState;
     setPreviousTaskState(oldState);
@@ -217,26 +179,18 @@ void TaskControllerNode::setPreviousTaskState(TaskState previousState) {
     previousTaskState = previousState;
 }
 
-void TaskControllerNode::incrementTiming() {
-    currentTiming += configs.stateCheckingFrequency.perCycleTime();
-}
-
-void TaskControllerNode::resetTiming() {
-    currentTiming.set_value(0);
-};
-
 void TaskControllerNode::startInitialPositionCalibration() {
-    if (getTiming() == 0_s) {
+    if (nodeTiming.getTiming() == 0_s) {
         ROS_INFO(
             "Please estimate initial position in %f seconds.", configs.initialPositionCalibrationTime.getBaseUnitValue()
         );
         delegateSpeaking("请确认机器人初始位置位于充电基站。");
     }
-    else if (getTiming() > configs.initialPositionCalibrationTime) {
+    else if (nodeTiming.getTiming() > configs.initialPositionCalibrationTime) {
         setCurrentTaskState(TaskState::ReadyToPerformTasks);
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::readyToPerformTasks() {
@@ -249,73 +203,73 @@ void TaskControllerNode::readyToPerformTasks() {
             throw std::runtime_error{""};
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::goToPharmacy() {
-    if (getTiming() == 0_s)
+    if (nodeTiming.getTiming() == 0_s)
         delegateNavigatingToWaypoint(getCurrentTask().pharmacy.c_str());
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::detectMedicine() {
-    if (getTiming() == 0_s)
+    if (nodeTiming.getTiming() == 0_s)
         delegateChangingRobotBehavior(ObjectDetectionControl::Start);
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::performingObjectGrab() {
-    if (getTiming() == 0_s)
+    if (nodeTiming.getTiming() == 0_s)
         delegateObjectGrabbing(getCurrentTask().medicinePosition);
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::goToPatient() {
-    if (getTiming() == 0_s) {
+    if (nodeTiming.getTiming() == 0_s) {
         if (getCurrentTask().type == TaskType::MedicineDelivery
             || getCurrentTask().getTaskType() == TaskType::Inspection)
             delegateNavigatingToWaypoint(getCurrentTask().patient);
         else
             throw std::runtime_error{""};
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::deliverMedicine() {
     static bool haveDropped{false};
-    if (getTiming() == 0_s) {
+    if (nodeTiming.getTiming() == 0_s) {
         delegateSpeaking(getCurrentTask().prescription);
     }
-    else if (getTiming() > 10_s && !haveDropped) {
+    else if (nodeTiming.getTiming() > 10_s && !haveDropped) {
         delegateControlingRobotManipulator(GripperControl{15_cm});
         haveDropped = true;
     }
-    else if (getTiming() > 20_s) {
+    else if (nodeTiming.getTiming() > 20_s) {
         setCurrentTaskState(TaskState::MovingBackward);
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::stepBackward() {
-    if (getTiming() == 0_s)
+    if (nodeTiming.getTiming() == 0_s)
         delegateControlingRobotVelocity(-0.1_m_per_s);
-    else if (getTiming() > 5_s) {
+    else if (nodeTiming.getTiming() > 5_s) {
         delegateControlingRobotVelocity(0_m_per_s);
         setCurrentTaskState(TaskState::RetractingTheArm);
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::retractManipulaor() {
-    if (getTiming() == 0_s)
+    if (nodeTiming.getTiming() == 0_s)
         delegateControlingRobotManipulator(ArmControl{0_cm});
-    else if (getTiming() > 5_s) {
+    else if (nodeTiming.getTiming() > 5_s) {
         setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::haveFinishedPreviousTask() {
@@ -345,49 +299,49 @@ void TaskControllerNode::haveFinishedPreviousTask() {
 void TaskControllerNode::goToBaseStation() {
     static bool isCancelled{false};
     static Duration cancellationTime{0_s};
-    if (getTiming() == 0_s)
+    if (nodeTiming.getTiming() == 0_s)
         delegateNavigatingToWaypoint(configs.baseStationName);
     if (!legacyGeneralTasks.empty() && !isCancelled) {
         navigationClient.cancelAllGoals();
-        cancellationTime = getTiming();
+        cancellationTime = nodeTiming.getTiming();
         isCancelled = true;
     }
-    else if (isCancelled && getTiming() - cancellationTime > 2_s){
+    else if (isCancelled && nodeTiming.getTiming() - cancellationTime > 2_s) {
         startNextTask();
         isCancelled = false;
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::waypointUnreachable() {
-    if (getTiming() == 0_s) {
+    if (nodeTiming.getTiming() == 0_s) {
         delegateSpeaking("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
     }
-    else if (getTiming() > 20_s) {
+    else if (nodeTiming.getTiming() > 20_s) {
         setCurrentTaskState(getPreviousTaskState());
         return;
     }
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::measuringTemperature() {
     static bool haveSpoken = false;
-    if (getTiming() == 0_s) {
+    if (nodeTiming.getTiming() == 0_s) {
         delegateSpeaking("测温中。");
         ROS_INFO("Start measuring temperature.");
     }
-    else if (getTiming() > 5_s && !haveSpoken) {
+    else if (nodeTiming.getTiming() > 5_s && !haveSpoken) {
         delegateSpeaking("测温完成。体温正常。");
         haveSpoken = true;
     }
-    else if (getTiming() >= 10_s) {
+    else if (nodeTiming.getTiming() >= 10_s) {
         haveSpoken = false;
         setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
         return;
     }
     // showTiming();
-    incrementTiming();
+    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::showTasks() const {
@@ -403,7 +357,7 @@ void TaskControllerNode::showTasks() const {
 }
 
 void TaskControllerNode::showTiming() const {
-    ROS_INFO("Current timing: %s", getTiming().toString().c_str());
+    ROS_INFO("Current timing: %s", nodeTiming.getTiming().toString().c_str());
 }
 
 void TaskControllerNode::displayInitializationResult() const {
@@ -423,7 +377,7 @@ void TaskControllerNode::displayInitializationResult() const {
         "objectMoveTasksMessageSubscriber: %s\n"
         "taskStateControlMessageSubscriber: %s\n",
         configs.baseStationName.c_str(),
-        configs.stateCheckingFrequency.toString().c_str(),
+        configs.nodeBasicConfig.loopFrequency.toString().c_str(),
         configs.initialPositionCalibrationTime.toString().c_str(),
         velocityCommandMessagePublisher.getTopic().c_str(),
         manipulatiorControlMessagePublisher.getTopic().c_str(),
@@ -477,13 +431,15 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             ROS_INFO(
                 "Arrived pharmacy: %s (Spent time: %s)",
                 getCurrentTask().pharmacy.c_str(),
-                getTiming().toString().c_str()
+                nodeTiming.getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::DetectingMedicine);
         }
         else if (getCurrentTaskState() == TaskState::GoingToPatient) {
             ROS_INFO(
-                "Arrived patient: %s (Spent time: %s)", getCurrentTask().patient.c_str(), getTiming().toString().c_str()
+                "Arrived patient: %s (Spent time: %s)",
+                getCurrentTask().patient.c_str(),
+                nodeTiming.getTiming().toString().c_str()
             );
             if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
                 setCurrentTaskState(TaskState::DeliveringMedicine);
@@ -496,7 +452,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             ROS_INFO(
                 "Arrived base station: %s (Spent time: %s)",
                 configs.baseStationName.c_str(),
-                getTiming().toString().c_str()
+                nodeTiming.getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::ReadyToPerformTasks);
         }
@@ -508,7 +464,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             ROS_INFO(
                 "Failed to arrive pharmacy: %s (Spent time: %s)",
                 getCurrentTask().pharmacy.c_str(),
-                getTiming().toString().c_str()
+                nodeTiming.getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
         }
@@ -516,7 +472,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             ROS_INFO(
                 "Failed to arrive patient: %s (Spent time: %s)",
                 getCurrentTask().patient.c_str(),
-                getTiming().toString().c_str()
+                nodeTiming.getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
         }
@@ -524,7 +480,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
             ROS_INFO(
                 "Failed to arrive base station: %s (Spent time: %s)",
                 configs.baseStationName.c_str(),
-                getTiming().toString().c_str()
+                nodeTiming.getTiming().toString().c_str()
             );
             setCurrentTaskState(TaskState::WaypointUnreachable);
         }

@@ -1,48 +1,41 @@
 #include "xiaohu_robot/Foundation/NodeControl.hpp"
-#include "ros/init.h"
-#include "ros/this_node.h"
-#include <stdexcept>
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
+#include <sstream>
+#include <utility>
 
-using namespace xiaohu_robot;
+namespace xiaohu_robot {
+inline namespace Foundation {
+NodeBasicConfig::NodeBasicConfig(std::string nodeNamespace, std::size_t messageBufferSize, Frequency loopFrequency):
+    nodeNamespace{std::move(nodeNamespace)},
+    messageBufferSize{messageBufferSize},
+    loopFrequency{std::move(loopFrequency)} {}
 
-std::string const NodeControlBehavior::pause{"pause"};
-std::string const NodeControlBehavior::resume{"resume"};
-
-void EnableNodeControl::incrementTiming() {
-    setTiming(getTiming() + getCheckStateFrequency().perCycleTime());
+std::string NodeBasicConfig::toString() const {
+    std::ostringstream oss;
+    oss << "nodeNamespace: " << nodeNamespace << "\n"
+        << "messageBufferSize: " << messageBufferSize << "\n"
+        << "loopFrequency: " << loopFrequency;
+    return oss.str();
 }
 
-void EnableNodeControl::resetTiming() {
+NodeTiming::NodeTiming(NodeBasicConfig const& nodeBasicConfig):
+    nodeBasicConfig{nodeBasicConfig},
+    timing{0_s} {}
+
+Duration NodeTiming::getTiming() const {
+    return timing;
+}
+
+void NodeTiming::setTiming(Duration timing) {
+    this->timing = timing;
+}
+
+void NodeTiming::incrementTiming() {
+    setTiming(getTiming() + nodeBasicConfig.loopFrequency.perCycleTime());
+}
+
+void NodeTiming::resetTiming() {
     setTiming(0_s);
 }
-
-void EnableNodeControl::onReceiveNodeControlMessage(NodeControlMessagePointer message) {
-    if (message->node != ros::this_node::getName())
-        return;
-    if (message->node == NodeControlBehavior::resume) {
-        setNodeState(NodeState::running);
-    }
-    else if (message->node == NodeControlBehavior::pause) {
-        setNodeState(NodeState::idle);
-    }
-    else {
-        throw std::runtime_error{"Not supported control."};
-    }
-}
-
-void EnableNodeControl::run() {
-    ros::Rate loopRate{getCheckStateFrequency()};
-    while (ros::ok()) {
-        if (getNodeState() == NodeState::running) {
-            whenIsRunning();
-            ros::spinOnce();
-        }
-        else if (getNodeState() == NodeState::idle) {
-            whenIsIdle();
-        }
-        else {
-            throw std::runtime_error{"Not supported control."};
-        }
-        loopRate.sleep();
-    }
-}
+}  // namespace Foundation
+}  // namespace xiaohu_robot

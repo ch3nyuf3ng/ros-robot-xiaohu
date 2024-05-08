@@ -1,24 +1,25 @@
 #include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 
 namespace xiaohu_robot {
-char const* const CommonConfigs::baseStationName{"base"};
-char const* const CommonConfigs::velocityCommandTopic{"/cmd_vel"};
-char const* const CommonConfigs::joystickTopic{"joy"};
-char const* const CommonConfigs::objectDetectionControlTopic{"/wpb_home/behaviors"};
-char const* const CommonConfigs::navigationWaypointTopic{"/waterplus/navi_waypoint"};
-char const* const CommonConfigs::grabObjectCoodinateTopic{"/wpb_home/grab_action"};
-char const* const CommonConfigs::manipulatorControlTopic{"/wpb_home/mani_ctrl"};
-char const* const CommonConfigs::detectedObjectCoordinatesTopic{"/wpb_home/objects_3d"};
-char const* const CommonConfigs::navigationResultTopic{"/waterplus/navi_result"};
-char const* const CommonConfigs::objectGrabbingResultTopic{"/wpb_home/grab_result"};
-char const* const CommonConfigs::speakTextTopic{"/xfyun/tts"};
-char const* const CommonConfigs::moveBaseTopic{"move_base"};
+std::string const CommonConfigs::velocityCommandTopic{"/cmd_vel"};
+std::string const CommonConfigs::joystickTopic{"joy"};
+std::string const CommonConfigs::objectDetectionControlTopic{"/wpb_home/behaviors"};
+std::string const CommonConfigs::navigationWaypointTopic{"/waterplus/navi_waypoint"};
+std::string const CommonConfigs::objectGrabbingCoodinateTopic{"/wpb_home/grab_action"};
+std::string const CommonConfigs::manipulatorControlTopic{"/wpb_home/mani_ctrl"};
+std::string const CommonConfigs::detectedObjectCoordinatesTopic{"/wpb_home/objects_3d"};
+std::string const CommonConfigs::navigationResultTopic{"/waterplus/navi_result"};
+std::string const CommonConfigs::objectGrabbingResultTopic{"/wpb_home/grab_result"};
+std::string const CommonConfigs::speakTextTopic{"/xfyun/tts"};
+std::string const CommonConfigs::moveBaseTopic{"move_base"};
+std::string const CommonConfigs::initPositionWithCoordinateCovarianceStampedTopic{"/initialpose"};
+std::string const CommonConfigs::clearCostmapsTopic{"/move_base/clear_costmaps"};
 
-char const* const CommonConfigs::nodeNamespace{"xiaohu_robot"};
-char const* const CommonConfigs::legacyTasksTopic{"/xiaohu_robot/ObjectMovingTasks"};
-char const* const CommonConfigs::legacyGeneralTasksTopic{"/xiaohu_robot/general_tasks"};
-char const* const CommonConfigs::taskStateControlTopic{"/xiaohu_robot/TaskStateControl"};
+std::string const CommonConfigs::nodeNamespace{"xiaohu_robot"};
+std::string const CommonConfigs::legacyGeneralTasksTopic{nodeNamespace + "/general_tasks"};
+std::string const CommonConfigs::initPositionWithCoordinateTopic{nodeNamespace + "/init_position"};
+std::string const CommonConfigs::baseStationName{"base"};
 
 std::size_t const CommonConfigs::messageBufferSize{60};
-Frequency const CommonConfigs::stateCheckingFrequency{60_Hz};
+Frequency const CommonConfigs::loopFrequency{60_Hz};
 }  // namespace xiaohu_robot

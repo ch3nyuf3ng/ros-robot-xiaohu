@@ -1,67 +1,58 @@
 #pragma once
 
-#include "xiaohu_robot/Foundation/Task.hpp"
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
+#include "xiaohu_robot/Foundation/NodeControl.hpp"
+#include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
-#include <cstddef>
 #include <deque>
 #include <string>
 
 namespace xiaohu_robot {
 inline namespace Nodes {
-struct TaskControllerNodeConfigs final {
-    std::string baseStationName;
-    std::string velocityCommandTopic;
-    std::string objectDetectionControlTopic;
-    std::string navigationWaypointTopic;
-    std::string objectGrabbingCoordinateTopic;
-    std::string manipulatorControlTopic;
-    std::string detectedObjectCoordinatesTopic;
-    std::string navigationResultTopic;
-    std::string objectGrabbingResultTopic;
-    std::string legacyTasksTopic;
-    std::string legacyGeneralTasksTopic;
-    std::string taskStateControlTopic;
-    std::string speakTextTopic;
-    std::string moveBaseTopic;
-    std::size_t messageBufferSize;
-    std::string nodeNamespace;
-    Frequency stateCheckingFrequency;
-    Duration initialPositionCalibrationTime;
-    Length heightCompensation;
-    bool hasManipulator;
-
-    TaskControllerNodeConfigs(
-        std::string baseStationName,
-        std::string velocityCommandTopic,
-        std::string objectDetectionControlTopic,
-        std::string navigationWaypointTopic,
-        std::string objectGrabbingCoordinateTopic,
-        std::string manipulatorControlTopic,
-        std::string detectedObjectCoordinatesTopic,
-        std::string navigationResultTopic,
-        std::string objectGrabbingResultTopic,
-        std::string legacyTasksTopic,
-        std::string legacyGeneralTasksTopic,
-        std::string taskStateControlTopic,
-        std::string speakTextTopic,
-        std::string moveBaseTopic,
-        std::size_t messageBufferSize,
-        std::string nodeNamespace,
-        Frequency stateCheckingFrequency,
-        Duration initialPositionCalibrationTime,
-        Length heightCompensation,
-        bool hasManipulator = true
-    );
-};
-
-class TaskControllerNode final {
+class TaskControllerNode final: public Runnable {
 public:
-    TaskControllerNode(TaskControllerNodeConfigs);
-    void run();
+    struct Config final {
+        Length heightCompensation;
+        Duration initialPositionCalibrationTime;
+        std::string baseStationName;
+        std::string velocityCommandTopic;
+        std::string objectDetectionControlTopic;
+        std::string navigationWaypointTopic;
+        std::string objectGrabbingCoordinateTopic;
+        std::string manipulatorControlTopic;
+        std::string detectedObjectCoordinatesTopic;
+        std::string navigationResultTopic;
+        std::string objectGrabbingResultTopic;
+        std::string legacyGeneralTasksTopic;
+        std::string speakTextTopic;
+        std::string moveBaseTopic;
+        NodeBasicConfig nodeBasicConfig;
+
+        Config(
+            Length heightCompensation,
+            Duration initialPositionCalibrationTime,
+            std::string baseStationName = CommonConfigs::baseStationName,
+            std::string velocityCommandTopic = CommonConfigs::velocityCommandTopic,
+            std::string objectDetectionControlTopic = CommonConfigs::objectDetectionControlTopic,
+            std::string navigationWaypointTopic = CommonConfigs::navigationWaypointTopic,
+            std::string objectGrabbingCoordinateTopic = CommonConfigs::objectGrabbingCoodinateTopic,
+            std::string manipulatorControlTopic = CommonConfigs::manipulatorControlTopic,
+            std::string detectedObjectCoordinatesTopic = CommonConfigs::detectedObjectCoordinatesTopic,
+            std::string navigationResultTopic = CommonConfigs::navigationResultTopic,
+            std::string objectGrabbingResultTopic = CommonConfigs::objectGrabbingResultTopic,
+            std::string legacyGeneralTasksTopic = CommonConfigs::legacyGeneralTasksTopic,
+            std::string speakTextTopic = CommonConfigs::speakTextTopic,
+            std::string moveBaseTopic = CommonConfigs::moveBaseTopic,
+            NodeBasicConfig nodeBasicConfig = NodeBasicConfig{}
+        );
+    };
+
+    TaskControllerNode(Config);
+    void run() override;
 
 private:
     enum class TaskState {
@@ -85,12 +76,12 @@ private:
         Stop
     };
 
+    Config configs;
     NodeHandle nodeHandle;
+    NodeTiming nodeTiming;
     TaskState currentTaskState;
     TaskState previousTaskState;
-    Duration currentTiming;
     std::deque<LegacyGeneralTask> legacyGeneralTasks;
-
     MessagePublisher const velocityCommandMessagePublisher;
     MessagePublisher const objectDetectionControlMessagePublisher;
     MessagePublisher const navigationWaypointMessagePublisher;
@@ -104,16 +95,11 @@ private:
     MessageSubscriber const taskStateControlMessageSubscriber;
     NavigationClient navigationClient;
 
-    TaskControllerNodeConfigs configs;
-
     LegacyGeneralTask& getCurrentTask();
     TaskState getCurrentTaskState() const;
     TaskState getPreviousTaskState() const;
-    Duration getTiming() const;
     void setCurrentTaskState(TaskState nextState);
     void setPreviousTaskState(TaskState previousState);
-    void incrementTiming();
-    void resetTiming();
 
     void startInitialPositionCalibration();
     void readyToPerformTasks();

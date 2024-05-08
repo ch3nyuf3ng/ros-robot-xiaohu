@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="xiaohu_robot" type="init_position_node" name="init_position_node" />
+    <node pkg="xiaohu_robot" type="task_controller_node" name="task_controller_node" output="screen" />
+</launch>

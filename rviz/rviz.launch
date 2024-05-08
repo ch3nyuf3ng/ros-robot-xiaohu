@@ -1,0 +1,3 @@
+<launch>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find xiaohu_robot)/rviz/default_configs.rviz" required="true" />
+</launch>

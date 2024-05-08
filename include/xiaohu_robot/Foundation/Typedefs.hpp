@@ -1,10 +1,13 @@
 #pragma once
 
+#include "ros/service_client.h"
+#include "std_srvs/Empty.h"
 #ifndef XIAOHU_ROBOT_FOUNDATION_TYPE_HPP
 #define XIAOHU_ROBOT_FOUNDATION_TYPE_HPP
 
 #include "actionlib/client/simple_action_client.h"
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "geometry_msgs/Twist.h"
 #include "move_base_msgs/MoveBaseAction.h"
 #include "ros/node_handle.h"
@@ -29,6 +32,7 @@ inline namespace Typedefs {
 using StringMessage = std_msgs::String;
 using VelocityCommandMessage = geometry_msgs::Twist;
 using CoordinateMessage = geometry_msgs::Pose;
+using CoordinateCovarianceStampedMessage = geometry_msgs::PoseWithCovarianceStamped;
 using ManipulatorControlMessage = sensor_msgs::JointState;
 using ObjectDetectionResultMessasge = wpb_home_behaviors::Coord;
 
@@ -55,6 +59,8 @@ using LinearSpeed = Measurement<UnitSpeed>;
 using AngularSpeed = Measurement<UnitAngularSpeed>;
 
 using NavigationClient = actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>;
+using ServiceClient = ros::ServiceClient;
+using Procedure = std_srvs::Empty;
 }  // namespace Typedefs
 }  // namespace Foundation
 }  // namespace xiaohu_robot

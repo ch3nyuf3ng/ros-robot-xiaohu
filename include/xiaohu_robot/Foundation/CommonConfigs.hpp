@@ -8,26 +8,27 @@
 
 namespace xiaohu_robot {
 struct CommonConfigs {
-    static char const* const baseStationName;
-    static char const* const velocityCommandTopic;
-    static char const* const joystickTopic;
-    static char const* const objectDetectionControlTopic;
-    static char const* const navigationWaypointTopic;
-    static char const* const grabObjectCoodinateTopic;
-    static char const* const manipulatorControlTopic;
-    static char const* const detectedObjectCoordinatesTopic;
-    static char const* const navigationResultTopic;
-    static char const* const objectGrabbingResultTopic;
-    static char const* const speakTextTopic;
-    static char const* const moveBaseTopic;
+    static std::string const velocityCommandTopic;
+    static std::string const joystickTopic;
+    static std::string const objectDetectionControlTopic;
+    static std::string const navigationWaypointTopic;
+    static std::string const objectGrabbingCoodinateTopic;
+    static std::string const manipulatorControlTopic;
+    static std::string const detectedObjectCoordinatesTopic;
+    static std::string const navigationResultTopic;
+    static std::string const objectGrabbingResultTopic;
+    static std::string const speakTextTopic;
+    static std::string const moveBaseTopic;
+    static std::string const initPositionWithCoordinateCovarianceStampedTopic;
+    static std::string const clearCostmapsTopic;
 
-    static char const* const nodeNamespace;
-    static char const* const legacyTasksTopic;
-    static char const* const legacyGeneralTasksTopic;
-    static char const* const taskStateControlTopic;
+    static std::string const nodeNamespace;
+    static std::string const legacyGeneralTasksTopic;
+    static std::string const initPositionWithCoordinateTopic;
+    static std::string const baseStationName;
 
     static std::size_t const messageBufferSize;
-    static Frequency const stateCheckingFrequency;
+    static Frequency const loopFrequency;
 };
 }  // namespace xiaohu_robot
 

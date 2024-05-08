@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   actionlib
   move_base_msgs
+  sound_play
 )
 
 ## System dependencies are found with CMake's conventions
@@ -114,7 +115,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-# LIBRARIES serve_pkg
+# LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
     sensor_msgs
@@ -137,6 +138,13 @@ include_directories(
   include
   ${Boost_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
+)
+
+link_directories(lib)
+
+set(sound_libs 
+  ${catkin_LIBRARIES}
+  -lmsc -ldl -pthread -lm -lrt -lasound
 )
 
 ## Declare a C++ library
@@ -165,6 +173,14 @@ add_executable(${PROJECT_NAME}_task_controller_node
   src/${PROJECT_NAME}/Nodes/TaskControllerNode.cpp
 )
 
+add_executable(${PROJECT_NAME}_init_position_node
+  src/${PROJECT_NAME}/Nodes/InitPositionNode.cpp
+)
+
+add_executable(xfyun_tts_node
+  src/xfyun/tts_node.cpp
+)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -175,9 +191,25 @@ set_target_properties(${PROJECT_NAME}_task_controller_node
     PREFIX ""
 )
 
+set_target_properties(${PROJECT_NAME}_init_position_node
+  PROPERTIES
+    OUTPUT_NAME init_position_node
+    PREFIX ""
+)
+
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(${PROJECT_NAME}_task_controller_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+add_dependencies(${PROJECT_NAME}_init_position_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+add_dependencies(xfyun_tts_node
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
@@ -186,6 +218,15 @@ add_dependencies(${PROJECT_NAME}_task_controller_node
 target_link_libraries(${PROJECT_NAME}_task_controller_node
   ${PROJECT_NAME}_foundation
   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(${PROJECT_NAME}_init_position_node
+  ${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(xfyun_tts_node
+   ${sound_libs} 
 )
 
 #############
