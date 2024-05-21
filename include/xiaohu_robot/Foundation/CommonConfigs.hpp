@@ -7,29 +7,39 @@
 #include <cstddef>
 
 namespace xiaohu_robot {
-struct CommonConfigs {
-    static std::string const velocityCommandTopic;
-    static std::string const joystickTopic;
-    static std::string const objectDetectionControlTopic;
-    static std::string const navigationWaypointTopic;
-    static std::string const objectGrabbingCoodinateTopic;
-    static std::string const manipulatorControlTopic;
-    static std::string const detectedObjectCoordinatesTopic;
-    static std::string const navigationResultTopic;
-    static std::string const objectGrabbingResultTopic;
-    static std::string const speakTextTopic;
-    static std::string const moveBaseTopic;
-    static std::string const initPositionWithCoordinateCovarianceStampedTopic;
-    static std::string const clearCostmapsTopic;
-
-    static std::string const nodeNamespace;
-    static std::string const legacyGeneralTasksTopic;
-    static std::string const initPositionWithCoordinateTopic;
+inline namespace Foundation {
+struct CommonConfigs final {
     static std::string const baseStationName;
-
+    static std::string const xiaohuRobotNamespace;
+    static std::string const medicineDeliveryTaskRequestTopic;
+    static std::string const legacyGeneralTasksRequestTopic;
+    static std::string const inspectionTaskRequestTopic;
+    static std::string const mappingTaskRequestTopic;
+    static std::string const initPositionRequestTopic;
+    static std::string const initPositionResultTopic;
+    static std::string const joystickResultTopic;
+    static std::string const amclInitPositionRequestTopic;
+    static std::string const coordinateNavigationTopic;
+    static std::string const clearCostmapsTopic;
+    static std::string const velocityControlRequestTopic;
+    static std::string const manipulatorControlRequestTopic;
+    static std::string const medcineDetectionRequestTopic;
+    static std::string const medicineDetectionResultTopic;
+    static std::string const waypointNavigationRequestTopic;
+    static std::string const waypointNavigationResultTopic;
+    static std::string const medicineGraspRequestTopic;
+    static std::string const medicineGraspResultTopic;
+    static std::string const textToSpeechRequestTopic;
+    static std::string const textToSpeechResultTopic;
+    static std::string const speechRecognitionRequestTopic;
+    static std::string const speechRecognitionResultTopic;
+    static std::string const xfyunApiLoginParams;
     static std::size_t const messageBufferSize;
-    static Frequency const loopFrequency;
+    static std::string const& packagePath();
+    static Frequency const& loopFrequency();
+    static Duration const& maxTextSpeakingDuration();
 };
+}  // namespace Foundation
 }  // namespace xiaohu_robot
 
 #endif

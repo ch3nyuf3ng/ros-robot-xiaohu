@@ -1,3 +1,2 @@
 # MappingTaskMessage.msg
-string mapName
-string savePath
+string taskId

@@ -22,6 +22,9 @@ struct Coordinate final: public Printable, public MessageConvertible<CoordinateM
         orientationZ{},
         orientationW{} {};
 
+    Coordinate(CoordinateMessagePointer message):
+        Coordinate(*message) {}
+
     Coordinate(CoordinateMessage message):
         positionX{std::move(message.position.x)},
         positionY{std::move(message.position.y)},
@@ -72,6 +75,7 @@ struct Coordinate final: public Printable, public MessageConvertible<CoordinateM
 
     std::string toString() const override;
     CoordinateMessage toMessage() const override;
+    NavigationGoal toNavigationGoal() const;
 };
 }  // namespace Foundation
 }  // namespace xiaohu_robot

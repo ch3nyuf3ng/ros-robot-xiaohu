@@ -1,14 +1,16 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(xiaohu_robot)
+project(xiaohu_robot C CXX)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  roslib
   sensor_msgs
   std_msgs
   geometry_msgs
@@ -19,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   sound_play
   tf
   nav_msgs
+  xfyun_waterplus
 )
 
 ## System dependencies are found with CMake's conventions
@@ -57,19 +60,17 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  NodeControlMessage.msg
   GeneralTaskMessage.msg
-  InspectionTasksMessage.msg
+  InspectionTaskMessage.msg
   MappingTaskMessage.msg
-  MedicineDeliverySingleTaskMessage.msg
-  MedicineDeliveryTasksMessage.msg
+  MedicineDeliveryTaskMessage.msg
+  NodeControlMessage.msg
+  StatusAndDescriptionMessage.msg
 )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   Service1.srv
-#   Service2.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -120,6 +121,7 @@ catkin_package(
 # LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
+    roslib
     sensor_msgs
     geometry_msgs
     std_msgs
@@ -145,32 +147,32 @@ include_directories(
 link_directories(lib)
 
 set(sound_libs 
-  ${catkin_LIBRARIES}
   -lmsc -ldl -pthread -lm -lrt -lasound
 )
 
-## Declare a C++ library
 add_library(${PROJECT_NAME}_foundation
+  src/${PROJECT_NAME}/Foundation/Audio.cpp
+  src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
+  src/${PROJECT_NAME}/Foundation/Coordinate.cpp
+  src/${PROJECT_NAME}/Foundation/File.cpp
   src/${PROJECT_NAME}/Foundation/Measurement.cpp
   src/${PROJECT_NAME}/Foundation/ManipulatorControl.cpp
-  src/${PROJECT_NAME}/Foundation/Coordinate.cpp
   src/${PROJECT_NAME}/Foundation/NodeControl.cpp
-  src/${PROJECT_NAME}/Foundation/VelocityCommand.cpp
   src/${PROJECT_NAME}/Foundation/Task.cpp
-  src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
+  src/${PROJECT_NAME}/Foundation/VelocityCommand.cpp
+  src/${PROJECT_NAME}/Foundation/Voice.cpp
 )
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
 add_dependencies(${PROJECT_NAME}_foundation
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
 
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
+target_link_libraries(${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
+  ${sound_libs}
+)
+
 add_executable(${PROJECT_NAME}_task_controller_node
   src/${PROJECT_NAME}/Nodes/TaskControllerNode.cpp
 )
@@ -200,7 +202,6 @@ add_dependencies(${PROJECT_NAME}_init_position_node
   ${catkin_EXPORTED_TARGETS}
 )
 
-
 set_target_properties(${PROJECT_NAME}_init_position_node
   PROPERTIES
     OUTPUT_NAME init_position_node
@@ -212,31 +213,65 @@ target_link_libraries(${PROJECT_NAME}_init_position_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(xfyun_tts_node
-  src/xfyun/tts_node.cpp
+add_executable(${PROJECT_NAME}_tts_node
+  src/${PROJECT_NAME}/Nodes/TextToSpeechNode.cpp
 )
 
-add_dependencies(xfyun_tts_node
+add_dependencies(${PROJECT_NAME}_tts_node
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(xfyun_tts_node
-   ${sound_libs} 
+target_link_libraries(${PROJECT_NAME}_tts_node
+  ${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
 )
 
-add_executable(core_sim_node
+set_target_properties(${PROJECT_NAME}_tts_node
+  PROPERTIES
+    OUTPUT_NAME tts_node
+    PREFIX ""
+)
+
+add_executable(${PROJECT_NAME}_asr_node
+  src/${PROJECT_NAME}/Nodes/SpeechRecognitionNode.cpp
+)
+
+add_dependencies(${PROJECT_NAME}_asr_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(${PROJECT_NAME}_asr_node
+  ${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
+)
+
+set_target_properties(${PROJECT_NAME}_asr_node
+  PROPERTIES
+    OUTPUT_NAME asr_node
+    PREFIX ""
+)
+
+add_executable(${PROJECT_NAME}_core_sim_node
   src/wpr_simulation/core_sim_node.cpp
 )
 
-add_dependencies(core_sim_node
+set_target_properties(${PROJECT_NAME}_core_sim_node
+  PROPERTIES
+    OUTPUT_NAME core_sim_node
+    PREFIX ""
+)
+
+add_dependencies(${PROJECT_NAME}_core_sim_node
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(core_sim_node
+target_link_libraries(${PROJECT_NAME}_core_sim_node
   ${catkin_LIBRARIES}
 )
+
 #############
 ## Install ##
 #############

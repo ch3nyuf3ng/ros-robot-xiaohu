@@ -1,4 +1,9 @@
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <utility>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
@@ -15,9 +20,9 @@ ManipulatorControlMessage ManipulatorControl::createMessage(std::size_t control_
 }
 
 /* struct ArmControl */
-ArmControl::ArmControl(Length const& liftHeight, LinearSpeed const& liftSpeed):
-    liftHeight{liftHeight},
-    liftSpeed{liftSpeed} {}
+ArmControl::ArmControl(Length liftHeight, LinearSpeed liftSpeed):
+    liftHeight{std::move(liftHeight)},
+    liftSpeed{std::move(liftSpeed)} {}
 
 ManipulatorControlMessage ArmControl::toMessage() const {
     ManipulatorControlMessage controlMessage{createMessage(1)};
@@ -33,9 +38,9 @@ std::string ArmControl::toString() const {
     return "ArmControl{liftHeight: " + liftHeight.toString() + ", liftSpeed: " + liftSpeed.toString() + "}";
 }
 
-GripperControl::GripperControl(Length const& gripper_finger_gap, AngularSpeed const& gripper_move_speed):
-    fingerGap{gripper_finger_gap},
-    moveSpeed{gripper_move_speed} {}
+GripperControl::GripperControl(Length fingerGap, AngularSpeed moveSpeed):
+    fingerGap{std::move(fingerGap)},
+    moveSpeed{std::move(moveSpeed)} {}
 
 ManipulatorControlMessage GripperControl::toMessage() const {
     ManipulatorControlMessage controlMessage{createMessage(1)};
@@ -49,6 +54,30 @@ ManipulatorControlMessage GripperControl::toMessage() const {
 
 std::string GripperControl::toString() const {
     return "GripperControl{fingerGap: " + fingerGap.toString() + ", moveSpeed: " + moveSpeed.toString() + "}";
+}
+
+std::string MultiPartControl::toString() const {
+    std::ostringstream oss;
+    oss << "MultiPartControl{" << '\n';
+    for (auto& control : controls) {
+        oss << control->toString() << '\n';
+    }
+    oss << "}";
+    return oss.str();
+}
+
+ManipulatorControlMessage MultiPartControl::toMessage() const {
+    ManipulatorControlMessage controlMessage{createMessage(controls.size())};
+    std::size_t index{0};
+    for (auto& control : controls) {
+        ManipulatorControlMessage partControlMessage{control->toMessage()};
+        controlMessage.name[index] = partControlMessage.name[0];
+        controlMessage.position[index] = partControlMessage.position[0];
+        controlMessage.velocity[index] = partControlMessage.velocity[0];
+        controlMessage.effort[index] = partControlMessage.effort[0];
+        index++;
+    }
+    return controlMessage;
 }
 }  // namespace Foundation
 }  // namespace xiaohu_robot

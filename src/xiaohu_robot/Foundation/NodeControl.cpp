@@ -1,41 +1,44 @@
 #include "xiaohu_robot/Foundation/NodeControl.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
-#include <sstream>
+#include <functional>
 #include <utility>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-NodeBasicConfig::NodeBasicConfig(std::string nodeNamespace, std::size_t messageBufferSize, Frequency loopFrequency):
-    nodeNamespace{std::move(nodeNamespace)},
-    messageBufferSize{messageBufferSize},
+NodeTiming::NodeTiming(Frequency loopFrequency):
     loopFrequency{std::move(loopFrequency)} {}
 
-std::string NodeBasicConfig::toString() const {
-    std::ostringstream oss;
-    oss << "nodeNamespace: " << nodeNamespace << "\n"
-        << "messageBufferSize: " << messageBufferSize << "\n"
-        << "loopFrequency: " << loopFrequency;
-    return oss.str();
+Duration const& NodeTiming::getCurrentTiming() const {
+    return currentTiming;
 }
 
-NodeTiming::NodeTiming(NodeBasicConfig const& nodeBasicConfig):
-    nodeBasicConfig{nodeBasicConfig},
-    timing{0_s} {}
-
-Duration NodeTiming::getTiming() const {
-    return timing;
+void NodeTiming::addTimedTask(Duration const& delay, std::function<void()> task, std::string description) {
+    Duration executionTime{delay + getCurrentTiming()};
+    timedTasks.push_back({std::move(executionTime), std::move(task), description});
+    std::cout << '[' << getCurrentTiming() << "] 将在" << delay << "后执行任务：" << description << std::endl;
 }
 
-void NodeTiming::setTiming(Duration timing) {
-    this->timing = timing;
+void NodeTiming::setCurrentTiming(Duration timing) {
+    this->currentTiming = std::move(timing);
 }
 
-void NodeTiming::incrementTiming() {
-    setTiming(getTiming() + nodeBasicConfig.loopFrequency.perCycleTime());
+void NodeTiming::increment() {
+    setCurrentTiming(getCurrentTiming() + loopFrequency.perCycleTime());
+    auto removeIter = std::remove_if(timedTasks.begin(), timedTasks.end(), [&](TimedTask const& timedTask) {
+        if (getCurrentTiming() >= timedTask.executionTime) {
+            timedTask.task();
+            std::cout << '[' << getCurrentTiming() << "] 已执行任务：" << timedTask.description << std::endl;
+            return true;
+        } else {
+            return false;
+        }
+    });
+    timedTasks.erase(removeIter, timedTasks.end());
 }
 
-void NodeTiming::resetTiming() {
-    setTiming(0_s);
+void NodeTiming::reset() {
+    timedTasks.clear();
+    setCurrentTiming(0_s);
 }
 }  // namespace Foundation
 }  // namespace xiaohu_robot

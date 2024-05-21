@@ -33,13 +33,13 @@ double UnitConverterLinear::value(double from_base_unit_value) const {
 }
 
 bool UnitConverterLinear::equals(UnitConverter const& object) const {
-    if (this == &object)
+    if (this == &object) {
         return true;
+    }
     try {
         auto& other{dynamic_cast<UnitConverterLinear const&>(object)};
         return other.coefficient == coefficient && other.constant == constant;
-    }
-    catch (std::bad_cast const&) {
+    } catch (std::bad_cast const&) {
         return false;
     }
 }
@@ -55,8 +55,7 @@ bool TrivivalUnit::equals(Unit const& object) const {
     try {
         auto& other = dynamic_cast<TrivivalUnit const&>(object);
         return other.symbol == symbol;
-    }
-    catch (std::bad_cast const& e) {
+    } catch (std::bad_cast const& e) {
         return false;
     }
 }
@@ -83,6 +82,7 @@ UnitLength const* UnitLength::getBaseUnit() const {
 }
 
 /* class UnitDuration */
+shared_ptr<UnitDuration const> const UnitDuration::microseconds{UnitDuration::makeConst("us", 1e-6)};
 shared_ptr<UnitDuration const> const UnitDuration::milliseconds{UnitDuration::makeConst("ms", 0.001)};
 shared_ptr<UnitDuration const> const UnitDuration::seconds{UnitDuration::makeConst("s", 1)};
 shared_ptr<UnitDuration const> const UnitDuration::minutes{UnitDuration::makeConst("min", 60)};

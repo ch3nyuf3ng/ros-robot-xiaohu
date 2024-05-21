@@ -22,5 +22,5 @@
         <remap from="robot_description" to="wpb_home_description" />
         <remap from="/joint_states" to="/wpb_home/joint_states" />
     </node>
-    <node name="core_sim_node" pkg="xiaohu_robot" type="core_sim_node" />
+    <node name="wpb_home_sim" pkg="wpr_simulation" type="wpb_home_sim" />
 </launch>

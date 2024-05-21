@@ -1,18 +1,27 @@
 #include "xiaohu_robot/Nodes/TaskControllerNode.hpp"
-#include "xiaohu_robot/Foundation/Measurement.hpp"
-#include "xiaohu_robot/Foundation/NodeControl.hpp"
+#include "ros/console.h"
+#include "xiaohu_robot/Foundation/Coordinate.hpp"
+#include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include "xiaohu_robot/Foundation/VelocityCommand.hpp"
-#include "xiaohu_robot/GeneralTaskMessage.h"
-#include <stdexcept>
+#include "xiaohu_robot/InspectionTaskMessage.h"
+#include "xiaohu_robot/MappingTaskMessage.h"
+#include "xiaohu_robot/MedicineDeliveryTaskMessage.h"
+#include <chrono>
+#include <clocale>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <thread>
 #include <utility>
 
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
+    std::setlocale(LC_ALL, "zh_CN.utf8");
 
     ros::init(argc, argv, "task_ctrl_node");
-    TaskControllerNode taskControllerNode{TaskControllerNode::Config{10_s}};
+    TaskControllerNode taskControllerNode{TaskControllerNode::Configs{}};
     taskControllerNode.run();
 
     return 0;
@@ -20,92 +29,155 @@ int main(int argc, char* argv[]) {
 
 namespace xiaohu_robot {
 inline namespace Nodes {
-TaskControllerNode::Config::Config(
-    Duration initialPositionCalibrationTime,
-    std::string baseStationName,
-    std::string velocityCommandTopic,
-    std::string objectDetectionControlTopic,
-    std::string navigationWaypointTopic,
-    std::string objectGrabbingCoordinateTopic,
-    std::string manipulatorControlTopic,
-    std::string detectedObjectCoordinatesTopic,
-    std::string navigationResultTopic,
-    std::string objectGrabbingResultTopic,
-    std::string legacyGeneralTasksTopic,
-    std::string speakTextTopic,
-    std::string moveBaseTopic,
-    NodeBasicConfig nodeBasicConfig
-):
-    initialPositionCalibrationTime{std::move(initialPositionCalibrationTime)},
-    baseStationName{std::move(baseStationName)},
-    velocityCommandTopic{std::move(velocityCommandTopic)},
-    objectDetectionControlTopic{std::move(objectDetectionControlTopic)},
-    navigationWaypointTopic{std::move(navigationWaypointTopic)},
-    objectGrabbingCoordinateTopic{std::move(objectGrabbingCoordinateTopic)},
-    manipulatorControlTopic{std::move(manipulatorControlTopic)},
-    detectedObjectCoordinatesTopic{std::move(detectedObjectCoordinatesTopic)},
-    navigationResultTopic{std::move(navigationResultTopic)},
-    objectGrabbingResultTopic{std::move(objectGrabbingResultTopic)},
-    legacyGeneralTasksTopic{std::move(legacyGeneralTasksTopic)},
-    speakTextTopic{std::move(speakTextTopic)},
-    moveBaseTopic{std::move(moveBaseTopic)} {
-    sleep(1);
-}
-
-TaskControllerNode::TaskControllerNode(Config configs):
-    configs{std::move(configs)},
-    nodeHandle{},
-    nodeTiming{this->configs.nodeBasicConfig},
-    currentTaskState{TaskState::CalibratingInitialPosition},
-    previousTaskState{TaskState::ReadyToPerformTasks},
-    velocityCommandMessagePublisher{nodeHandle.advertise<VelocityCommandMessage>(
-        this->configs.velocityCommandTopic, this->configs.nodeBasicConfig.messageBufferSize
-    )},
-    objectDetectionControlMessagePublisher{nodeHandle.advertise<StringMessage>(
-        this->configs.objectDetectionControlTopic, this->configs.nodeBasicConfig.messageBufferSize
-    )},
-    navigationWaypointMessagePublisher{nodeHandle.advertise<StringMessage>(
-        this->configs.navigationWaypointTopic, this->configs.nodeBasicConfig.messageBufferSize
-    )},
-    objectGrabbingCoodinateMessagePublisher{nodeHandle.advertise<CoordinateMessage>(
-        this->configs.objectGrabbingCoordinateTopic, this->configs.nodeBasicConfig.messageBufferSize
-    )},
-    manipulatiorControlMessagePublisher{nodeHandle.advertise<ManipulatorControlMessage>(
-        this->configs.manipulatorControlTopic, this->configs.nodeBasicConfig.messageBufferSize
-    )},
-    speakTextMessagePublisher{nodeHandle.advertise<StringMessage>(
-        this->configs.speakTextTopic, this->configs.nodeBasicConfig.messageBufferSize
-    )},
-    detectedObjectCoordinatesMessageSubscriber{nodeHandle.subscribe<ObjectDetectionResultMessasgePointer>(
-        this->configs.detectedObjectCoordinatesTopic,
-        this->configs.nodeBasicConfig.messageBufferSize,
-        &TaskControllerNode::whenReceivedObjectDetectionResult,
+TaskControllerNode::TaskControllerNode(Configs configs):
+    nodeHandle(configs.nodeBasicConfig.nodeNamespace),
+    nodeTiming{configs.nodeBasicConfig.loopFrequency},
+    initPosition{},
+    baseStatePosition{},
+    initPositionRequestSubscriber{nodeHandle.subscribe<CoordinateMessage>(
+        configs.initPositionRequestTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedInitPositionRequest,
         this
     )},
-    navigationResultMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        this->configs.navigationResultTopic,
-        this->configs.nodeBasicConfig.messageBufferSize,
-        &TaskControllerNode::whenReceivedNavigationResult,
+    initPositionResultSubscriber{nodeHandle.subscribe<StatusAndDescriptionMessage>(
+        configs.initPositionResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedInitPositionResult,
         this
     )},
-    objectGrabResultMessageSubscriber{nodeHandle.subscribe<StringMessagePointer>(
-        this->configs.objectGrabbingResultTopic,
-        this->configs.nodeBasicConfig.messageBufferSize,
-        &TaskControllerNode::whenReceivedObjectGrabResult,
-        this
-    )},
-    legacyGeneralTasksMessageSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
-        this->configs.legacyGeneralTasksTopic,
-        this->configs.nodeBasicConfig.messageBufferSize,
+    taskState{},
+    currentTaskLegacy{},
+    legacyGeneralTasks{},
+    legacyGeneralTaskRequestSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
+        configs.legacyGeneralTasksRequestTopic,
+        configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedLegacyGeneralTaskRequest,
         this
     )},
-    navigationClient{this->configs.moveBaseTopic} {
-    displayInitializationResult();
+    tasks{},
+    inspectionTaskRequestSubscriber{nodeHandle.subscribe<InspectionTaskMessage>(
+        configs.inspectionTaskRequestTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedInspectionTaskRequest,
+        this
+    )},
+    mappingTaskRequestSubscriber{nodeHandle.subscribe<MappingTaskMessage>(
+        configs.mappingTaskRequestTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedMappingTaskRequest,
+        this
+    )},
+    medicineDeliveryRequestSubsriber{nodeHandle.subscribe<MedicineDeliveryTaskMessage>(
+        configs.medicineDeliveryTaskRequestTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest,
+        this
+    )},
+    velocityControl{},
+    velocityControlRequestPublisher{nodeHandle.advertise<VelocityCommandMessage>(
+        configs.velocityControlRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    manipulatorControl{},
+    manipulatiorControlRequestPublisher{nodeHandle.advertise<ManipulatorControlMessage>(
+        configs.manipulatorControlRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    waypointNavigation{},
+    waypointNavigationRequestPublisher{nodeHandle.advertise<StringMessage>(
+        configs.waypointNavigationRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    waypointNavigationResultSubscriber{nodeHandle.subscribe<StringMessagePointer>(
+        configs.waypointNavigationResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedNavigationResult,
+        this
+    )},
+    waypointUnreachableTimes{0},
+    obstacleClearing{},
+    navigationClient{configs.coordinateNavigationTopic},
+    textToSpeech{},
+    textToSpeechRequestPublisher{
+        nodeHandle.advertise<StringMessage>(configs.textToSpeechRequestTopic, configs.nodeBasicConfig.messageBufferSize)
+    },
+    textToSpeechResultSubscriber{nodeHandle.subscribe<StatusAndDescriptionMessage>(
+        configs.textToSpeechResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedTextToSpeechResult,
+        this
+    )},
+    speechReognition{},
+    speechRecognitionRequestPublisher{nodeHandle.advertise<StringMessage>(
+        configs.speechRecognitionRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    speechRecognitionResultSubscriber{nodeHandle.subscribe<StatusAndDescriptionMessage>(
+        configs.speechRecognitionResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedSpeechRecognitionResult,
+        this
+    )},
+    speechRecognitionContinuousFailureTimes{0},
+    medicineDetection{},
+    medicineDetectionRequestPublisher{nodeHandle.advertise<StringMessage>(
+        configs.medcineDetectionRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    medicineDetectionResultSubscriber{nodeHandle.subscribe<ObjectDetectionResultMessasgePointer>(
+        configs.medicineDetectionResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedMedicineDetectionResult,
+        this
+    )},
+    medicineGrasp{},
+    medicineGraspRequestPublisher{nodeHandle.advertise<CoordinateMessage>(
+        configs.medicineGraspRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    medicineGraspResultSubscriber{nodeHandle.subscribe<StringMessagePointer>(
+        configs.medicineGraspResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedMedicineGraspResult,
+        this
+    )},
+    soundPlayClient{},
+    temperatureMeasurement{},
+    configs{std::move(configs)} {
+    std::cout << "任务控制器已启动。" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+}
+
+TaskControllerNode::~TaskControllerNode() {
+    std::cout << "任务控制器已退出。" << std::endl;
+}
+
+void TaskControllerNode::DelegationState::reset() {
+    hasStarted = false;
+    hasFailed = false;
+    hasEnded = false;
+};
+
+void TaskControllerNode::DelegationState::start() {
+    hasStarted = true;
+}
+
+void TaskControllerNode::DelegationState::end() {
+    hasEnded = true;
+}
+
+void TaskControllerNode::DelegationState::fail() {
+    hasFailed = true;
+}
+
+void TaskControllerNode::SpeechRecognitionContext::reset() {
+    DelegationState::reset();
+    foundYes = false;
+    foundNo = false;
+}
+
+void TaskControllerNode::MedicineDetectionAndGraspContext::reset() {
+    DelegationState::reset();
+    medicinePosition = Coordinate{};
 }
 
 void TaskControllerNode::run() {
-    ros::Rate loop_rate{configs.nodeBasicConfig.loopFrequency};
+    ros::Rate loopRate{configs.nodeBasicConfig.loopFrequency};
     while (ros::ok()) {
         switch (getCurrentTaskState()) {
         case TaskState::CalibratingInitialPosition:
@@ -120,16 +192,16 @@ void TaskControllerNode::run() {
         case TaskState::DetectingMedicine:
             detectMedicine();
             break;
-        case TaskState::PerformingObjectGrab:
-            performingObjectGrab();
+        case TaskState::GraspingMedicine:
+            graspMedicine();
             break;
         case TaskState::GoingToPatient:
             goToPatient();
             break;
-        case TaskState::DeliveringMedicine:
-            deliverMedicine();
+        case TaskState::DroppingMedicine:
+            dropMedicine();
             break;
-        case TaskState::MovingBackward:
+        case TaskState::SteppingBackward:
             stepBackward();
             break;
         case TaskState::RetractingTheArm:
@@ -147,432 +219,651 @@ void TaskControllerNode::run() {
         case TaskState::MeasuringTemperature:
             measuringTemperature();
             break;
+        case TaskState::AskingIfVideoNeeded:
+            askIfVideoNeeded();
+            break;
+        case TaskState::VideoCommunicating:
+            videoCommunicating();
+            break;
+        case TaskState::HasMeasuredTemperature:
+            hasMeasuredTemperature();
+            break;
+        case TaskState::ConfirmPatientRequest:
+            confirmPatientRequest();
+            break;
+        case TaskState::SpeechRecognitionFailed:
+            speechRecognitionFailed();
+            break;
+        case TaskState::GiveUpCurrentTask:
+            giveUpCurrentTask();
+            break;
+        case TaskState::SpeakingPrescription:
+            speakPrescription();
+            break;
+        case TaskState::AskingIfGrabbedMedicine:
+            askIfGrabbedMedicine();
+            break;
+        case TaskState::WaitingForGrabbingMedicine:
+            waitForGrabbingMedicine();
+            break;
         }
+        checkNavigationState();
         ros::spinOnce();
-        loop_rate.sleep();
+        if (!taskState.stateTransferring) {
+            nodeTiming.increment();
+        } else {
+            taskState.stateTransferring = false;
+        }
+        loopRate.sleep();
     }
 }
 
-LegacyGeneralTask& TaskControllerNode::getCurrentTask() {
+MappingTask& TaskControllerNode::getCurrentMappingTask() {
+    return dynamic_cast<MappingTask&>(getCurrentTask());
+}
+
+InspectionTask& TaskControllerNode::getCurrentInspectionTask() {
+    return dynamic_cast<InspectionTask&>(getCurrentTask());
+}
+
+MedicineDeliveryTask& TaskControllerNode::getCurrentMedicineDeliveryTask() {
+    return dynamic_cast<MedicineDeliveryTask&>(getCurrentTask());
+}
+
+bool TaskControllerNode::isCurrentTaskLegacy() const {
+    return currentTaskLegacy.front();
+}
+
+SpecificTask& TaskControllerNode::getCurrentTask() {
+    return *tasks.front();
+}
+
+LegacyGeneralTask& TaskControllerNode::getCurrentLegacyTask() {
     return legacyGeneralTasks.front();
 }
 
 TaskControllerNode::TaskState TaskControllerNode::getCurrentTaskState() const {
-    return currentTaskState;
+    return taskState.currentTaskState;
 }
 
 TaskControllerNode::TaskState TaskControllerNode::getPreviousTaskState() const {
-    return previousTaskState;
+    return taskState.previousTaskState;
 }
 
-void TaskControllerNode::setCurrentTaskState(TaskState nextState) {
-    nodeTiming.resetTiming();
-    auto oldState = currentTaskState;
-    currentTaskState = nextState;
-    setPreviousTaskState(oldState);
-    ROS_INFO("State: %s -> %s", toString(oldState).c_str(), toString(currentTaskState).c_str());
+void TaskControllerNode::transferCurrentTaskStateTo(TaskState next) {
+    taskState.previousTaskState = taskState.currentTaskState;
+    taskState.currentTaskState = next;
+    taskState.stateTransferring = true;
+
+    ROS_INFO(
+        "任务状态: %s -> %s",
+        toString(taskState.previousTaskState).c_str(),
+        toString(taskState.currentTaskState).c_str()
+    );
 }
 
-void TaskControllerNode::setPreviousTaskState(TaskState previousState) {
-    previousTaskState = previousState;
+void TaskControllerNode::setPreviousTaskState(TaskState previous) {
+    taskState.previousTaskState = previous;
+}
+
+void TaskControllerNode::checkNavigationState() {
+    if (!navigation.hasStarted) {
+        return;
+    }
+    GoalState goalState{navigationClient.getState()};
+    if (!goalState.isDone()) {
+        return;
+    } else if (goalState == GoalState::SUCCEEDED) {
+        navigation.end();
+    } else {
+        navigation.fail();
+    }
 }
 
 void TaskControllerNode::startInitialPositionCalibration() {
-    if (nodeTiming.getTiming() == 0_s) {
-        ROS_INFO(
-            "Please estimate initial position in %f seconds.", configs.initialPositionCalibrationTime.getBaseUnitValue()
-        );
-        delegateSpeaking("请确认机器人初始位置位于充电基站。");
+    if (!textToSpeech.hasStarted && !initPosition.hasStarted) {
+        initPosition.hasStarted = true;
+        std::string hint{"请确认机器人初始位置位于充电基站。"};
+        ROS_INFO("%s", hint.c_str());
+        delegateTextToSpeech(hint);
+    } else if (textToSpeech.hasEnded && initPosition.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+        textToSpeech.reset();
+        initPosition.reset();
     }
-    else if (nodeTiming.getTiming() > configs.initialPositionCalibrationTime) {
-        setCurrentTaskState(TaskState::ReadyToPerformTasks);
-        return;
-    }
-    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::readyToPerformTasks() {
-    if (!legacyGeneralTasks.empty()) {
-        if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
-            setCurrentTaskState(TaskState::GoingToPharmacy);
-        else if (getCurrentTask().getTaskType() == TaskType::Inspection)
-            setCurrentTaskState(TaskState::GoingToPatient);
-        else
-            throw std::runtime_error{""};
+    if (currentTaskLegacy.empty()) {
         return;
     }
-    nodeTiming.incrementTiming();
+    switch (isCurrentTaskLegacy() ? getCurrentLegacyTask().getTaskType() : getCurrentTask().getTaskType()) {
+    case TaskType::Mapping:
+        throw UnsupportedTaskException{};
+    case TaskType::Inspection:
+        transferCurrentTaskStateTo(TaskState::GoingToPatient);
+        break;
+    case TaskType::MedicineDelivery:
+        transferCurrentTaskStateTo(TaskState::GoingToPharmacy);
+        break;
+    }
 }
 
 void TaskControllerNode::goToPharmacy() {
-    if (nodeTiming.getTiming() == 0_s)
-        delegateNavigatingToWaypoint(getCurrentTask().pharmacy.c_str());
-    nodeTiming.incrementTiming();
+    if (isCurrentTaskLegacy()) {
+        if (!waypointNavigation.hasStarted) {
+            delegateNavigatingToWaypoint(getCurrentLegacyTask().pharmacy.c_str());
+        } else if (waypointNavigation.hasEnded) {
+            transferCurrentTaskStateTo(TaskState::DetectingMedicine);
+            waypointNavigation.reset();
+        }
+    } else {
+        if (!navigation.hasStarted) {
+            navigation.start();
+            navigationClient.sendGoal(getCurrentMedicineDeliveryTask().pharmacyPosition.toNavigationGoal());
+        } else if (navigation.hasEnded) {
+            transferCurrentTaskStateTo(TaskState::DetectingMedicine);
+            navigation.reset();
+        }
+    }
 }
 
 void TaskControllerNode::detectMedicine() {
-    if (nodeTiming.getTiming() == 0_s)
-        delegateChangingRobotBehavior(ObjectDetectionControl::Start);
-    nodeTiming.incrementTiming();
+    if (!medicineDetection.hasStarted) {
+        delegateObjectDetectionControl(ObjectDetectionControl::Start);
+    } else if (medicineDetection.hasEnded) {
+        medicineGrasp.medicinePosition = medicineDetection.medicinePosition;
+        delegateObjectDetectionControl(ObjectDetectionControl::Stop);
+        transferCurrentTaskStateTo(TaskState::GraspingMedicine);
+        medicineDetection.reset();
+    }
 }
 
-void TaskControllerNode::performingObjectGrab() {
-    if (nodeTiming.getTiming() == 0_s)
-        delegateObjectGrabbing(getCurrentTask().medicinePosition);
-    nodeTiming.incrementTiming();
+void TaskControllerNode::graspMedicine() {
+    if (!medicineGrasp.hasStarted) {
+        delegateObjectGrasping(medicineGrasp.medicinePosition);
+    } else if (medicineGrasp.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::GoingToPatient);
+        medicineGrasp.reset();
+    }
 }
 
 void TaskControllerNode::goToPatient() {
-    if (nodeTiming.getTiming() == 0_s) {
-        if (getCurrentTask().type == TaskType::MedicineDelivery
-            || getCurrentTask().getTaskType() == TaskType::Inspection)
-            delegateNavigatingToWaypoint(getCurrentTask().patient);
-        else
-            throw std::runtime_error{""};
+    if (isCurrentTaskLegacy()) {
+        if (!waypointNavigation.hasStarted) {
+            delegateNavigatingToWaypoint(getCurrentLegacyTask().patient);
+        } else if (waypointNavigation.hasEnded) {
+            switch (getCurrentLegacyTask().getTaskType()) {
+            case TaskType::Mapping:
+                throw UnsupportedTaskException{};
+            case TaskType::Inspection:
+                transferCurrentTaskStateTo(TaskState::MeasuringTemperature);
+                break;
+            case TaskType::MedicineDelivery:
+                transferCurrentTaskStateTo(TaskState::SpeakingPrescription);
+                break;
+            }
+            waypointNavigation.reset();
+        }
+    } else {
+        if (!navigation.hasStarted) {
+            switch (getCurrentTask().getTaskType()) {
+            case TaskType::Mapping:
+                throw UnsupportedTaskException();
+            case TaskType::Inspection:
+                navigation.start();
+                navigationClient.sendGoal(getCurrentInspectionTask().patientPosition.toNavigationGoal());
+                break;
+            case TaskType::MedicineDelivery:
+                navigation.start();
+                navigationClient.sendGoal(getCurrentMedicineDeliveryTask().patientPosition.toNavigationGoal());
+                break;
+            }
+        } else if (navigation.hasEnded) {
+            switch (getCurrentTask().getTaskType()) {
+            case TaskType::Mapping:
+                throw UnsupportedTaskException{};
+            case TaskType::Inspection:
+                transferCurrentTaskStateTo(TaskState::MeasuringTemperature);
+                break;
+            case TaskType::MedicineDelivery:
+                transferCurrentTaskStateTo(TaskState::SpeakingPrescription);
+                break;
+            }
+            navigation.reset();
+        }
     }
-    nodeTiming.incrementTiming();
 }
 
-void TaskControllerNode::deliverMedicine() {
-    static bool haveDropped{false};
-    if (nodeTiming.getTiming() == 0_s) {
-        delegateSpeaking(getCurrentTask().prescription);
+void TaskControllerNode::speakPrescription() {
+    if (isCurrentTaskLegacy()) {
+        if (!textToSpeech.hasStarted) {
+            delegateTextToSpeech(getCurrentLegacyTask().prescription + "……请您伸手取药。");
+        } else if (textToSpeech.hasEnded) {
+            transferCurrentTaskStateTo(TaskState::AskingIfGrabbedMedicine);
+            textToSpeech.reset();
+        }
+    } else {
+        if (!textToSpeech.hasStarted) {
+            std::ostringstream oss;
+            oss << "患者" << getCurrentMedicineDeliveryTask().patientName << "，您有一份药品待取：";
+            oss << getCurrentMedicineDeliveryTask().prescription << "……";
+            oss << "请您伸手取药。";
+            delegateTextToSpeech(oss.str());
+        } else if (textToSpeech.hasEnded) {
+            transferCurrentTaskStateTo(TaskState::AskingIfGrabbedMedicine);
+            textToSpeech.reset();
+        }
     }
-    else if (nodeTiming.getTiming() > 10_s && !haveDropped) {
+}
+
+void TaskControllerNode::askIfGrabbedMedicine() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("您是否已准备好取药？");
+    } else if (textToSpeech.hasEnded && !speechReognition.hasStarted) {
+        delegateSpeechRecognition(10_s);
+    } else if (textToSpeech.hasEnded && speechReognition.hasEnded) {
+        if (speechReognition.foundYes) {
+            transferCurrentTaskStateTo(TaskState::DroppingMedicine);
+        } else {
+            transferCurrentTaskStateTo(TaskState::WaitingForGrabbingMedicine);
+        }
+        speechRecognitionContinuousFailureTimes = 0;
+        textToSpeech.reset();
+        speechReognition.reset();
+    } else if (textToSpeech.hasEnded && speechReognition.hasFailed) {
+        transferCurrentTaskStateTo(TaskState::SpeechRecognitionFailed);
+        textToSpeech.reset();
+        speechReognition.reset();
+    }
+}
+
+void TaskControllerNode::waitForGrabbingMedicine() {
+    if (!textToSpeech.hasStarted && !waiting.hasStarted) {
+        delegateTextToSpeech("好的，我会再等待您十秒钟。");
+        waiting.hasStarted = true;
+        nodeTiming.addTimedTask(10_s, [this]() { waiting.hasEnded = true; }, "等待患者抓取药品结束");
+    } else if (textToSpeech.hasEnded && waiting.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::AskingIfGrabbedMedicine);
+        textToSpeech.reset();
+        waiting.reset();
+    }
+}
+
+void TaskControllerNode::dropMedicine() {
+    if (!manipulatorControl.hasStarted) {
         delegateControlingRobotManipulator(GripperControl{15_cm});
-        haveDropped = true;
+        nodeTiming.addTimedTask(3_s, [this]() { manipulatorControl.hasEnded = true; }, "结束张开机械手");
+    } else if (manipulatorControl.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::SteppingBackward);
+        manipulatorControl.reset();
     }
-    else if (nodeTiming.getTiming() > 20_s) {
-        setCurrentTaskState(TaskState::MovingBackward);
-        haveDropped = false;
-        return;
-    }
-    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::stepBackward() {
-    if (nodeTiming.getTiming() == 0_s)
-        delegateControlingRobotVelocity(-0.1_m_per_s);
-    else if (nodeTiming.getTiming() > 5_s) {
-        delegateControlingRobotVelocity(0_m_per_s);
-        setCurrentTaskState(TaskState::RetractingTheArm);
-        return;
+    if (!velocityControl.hasStarted) {
+        delegateVelocityControl(-0.1_m_per_s);
+        nodeTiming.addTimedTask(
+            5_s,
+            [this]() {
+                delegateVelocityControl(0_m_per_s);
+                velocityControl.hasEnded = true;
+            },
+            "停止后退"
+        );
+    } else if (velocityControl.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::RetractingTheArm);
+        velocityControl.reset();
     }
-    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::retractManipulaor() {
-    if (nodeTiming.getTiming() == 0_s)
-        delegateControlingRobotManipulator(ArmControl{0_cm});
-    else if (nodeTiming.getTiming() > 5_s) {
-        setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
-        return;
+    if (!manipulatorControl.hasStarted) {
+        delegateControlingRobotManipulator(
+            MultiPartControl{std::make_unique<ArmControl>(0_cm), std::make_unique<GripperControl>(0_cm)}
+        );
+        nodeTiming.addTimedTask(5_s, [this]() { manipulatorControl.hasEnded = true; }, "停止回收机械臂");
+    } else if (manipulatorControl.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
+        manipulatorControl.reset();
     }
-    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::haveFinishedPreviousTask() {
-    if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
-        ROS_INFO(
-            "Have finished the previous medicine-delivery task (from %s to %s).",
-            getCurrentTask().pharmacy.c_str(),
-            getCurrentTask().patient.c_str()
-        );
+    if (isCurrentTaskLegacy()) {
+        switch (getCurrentLegacyTask().getTaskType()) {
+        case TaskType::Mapping:
+            throw UnsupportedTaskException{};
+        case TaskType::Inspection:
+            ROS_INFO("已完成巡诊任务 (%s)。", getCurrentLegacyTask().patient.c_str());
+            break;
+        case TaskType::MedicineDelivery:
+            ROS_INFO(
+                "已完成送药任务 (%s -> %s)。",
+                getCurrentLegacyTask().pharmacy.c_str(),
+                getCurrentLegacyTask().patient.c_str()
+            );
+            break;
+        }
+        legacyGeneralTasks.pop_front();
+    } else {
+        ROS_INFO("已完成%s。", getCurrentTask().toString().c_str());
+        tasks.pop_front();
     }
-    else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
-        ROS_INFO("Have finished the previous inspection task (%s).", getCurrentTask().patient.c_str());
+    currentTaskLegacy.pop_front();
+    showRemainedTasksCount();
+    if (!currentTaskLegacy.empty()) {
+        transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+    } else {
+        transferCurrentTaskStateTo(TaskState::GoingToBaseStation);
     }
-    else {
-        throw std::runtime_error{""};
+}
+
+void TaskControllerNode::askIfVideoNeeded() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("请问您是否需要与医生视频通话？");
+    } else if (textToSpeech.hasEnded && !speechReognition.hasStarted) {
+        delegateSpeechRecognition(10_s);
+    } else if (speechReognition.hasFailed) {
+        transferCurrentTaskStateTo(TaskState::SpeechRecognitionFailed);
+        textToSpeech.reset();
+    } else if (speechReognition.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::ConfirmPatientRequest);
+        speechRecognitionContinuousFailureTimes = 0;
+        textToSpeech.reset();
     }
-    legacyGeneralTasks.pop_front();
-    showTasks();
-    if (!legacyGeneralTasks.empty()) {
-        startNextTask();
+}
+
+void TaskControllerNode::speechRecognitionFailed() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("抱歉，我没有听清，请再试一次。您可以说“是”，或者“否”。");
+        speechRecognitionContinuousFailureTimes++;
+    } else if (textToSpeech.hasEnded) {
+        if (speechRecognitionContinuousFailureTimes < 3) {
+            transferCurrentTaskStateTo(getPreviousTaskState());
+        } else {
+            transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
+        }
+        textToSpeech.reset();
     }
-    else {
-        setCurrentTaskState(TaskState::GoingToBaseStation);
+}
+
+void TaskControllerNode::giveUpCurrentTask() {
+    if (!textToSpeech.hasStarted && !exceptionHandling.hasStarted) {
+        delegateTextToSpeech("重复出现异常。任务中断。");
+        exceptionHandling.hasStarted = true;
+    } else if (textToSpeech.hasEnded && exceptionHandling.hasEnded) {
+        transferCurrentTaskStateTo(getPreviousTaskState());
+        textToSpeech.reset();
+        exceptionHandling.reset();
+    }
+}
+
+void TaskControllerNode::confirmPatientRequest() {
+    if (!textToSpeech.hasStarted) {
+        if (speechReognition.foundYes) {
+            delegateTextToSpeech("好的，已为您安排视频通话。");
+        } else {
+            delegateTextToSpeech("好的，已取消视频通话。");
+        }
+    } else if (textToSpeech.hasEnded) {
+        if (speechReognition.foundYes) {
+            transferCurrentTaskStateTo(TaskState::VideoCommunicating);
+        } else {
+            transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
+        }
+        speechReognition.reset();
+        textToSpeech.reset();
+    }
+}
+
+void TaskControllerNode::videoCommunicating() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("语音通话暂未实现。");
+    } else if (textToSpeech.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
+        textToSpeech.reset();
     }
 }
 
 void TaskControllerNode::goToBaseStation() {
-    static bool isCancelled{false};
-    static Duration cancellationTime{0_s};
-    if (nodeTiming.getTiming() == 0_s)
-        delegateNavigatingToWaypoint(configs.baseStationName);
-    if (!legacyGeneralTasks.empty() && !isCancelled) {
-        navigationClient.cancelAllGoals();
-        cancellationTime = nodeTiming.getTiming();
-        isCancelled = true;
+    if (currentTaskLegacy.empty()) {
+        if (!navigation.hasStarted) {
+            navigation.start();
+            navigationClient.sendGoal(baseStatePosition.toNavigationGoal());
+        } else if (navigation.hasEnded) {
+            transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+            navigation.reset();
+        } else if (navigation.hasFailed) {
+            transferCurrentTaskStateTo(TaskState::WaypointUnreachable);
+            navigation.reset();
+        }
+    } else {
+        if (!navigation.hasStarted) {
+            transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+        } else {
+            if (navigation.hasEnded) {
+                transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+                navigation.reset();
+            } else {
+                if (!navigation.hasFailed) {
+                    navigationClient.cancelGoal();
+                } else {
+                    transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+                    navigation.reset();
+                }
+            }
+        }
     }
-    else if (isCancelled && nodeTiming.getTiming() - cancellationTime > 2_s) {
-        startNextTask();
-        isCancelled = false;
-        return;
-    }
-    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::waypointUnreachable() {
-    if (nodeTiming.getTiming() == 0_s) {
-        delegateSpeaking("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
+    } else if (textToSpeech.hasEnded && !obstacleClearing.hasStarted) {
+        obstacleClearing.hasStarted = true;
+        nodeTiming.addTimedTask(20_s, [this]() { obstacleClearing.hasEnded = true; }, "等待清除障碍物结束");
+    } else if (textToSpeech.hasEnded && obstacleClearing.hasEnded) {
+        transferCurrentTaskStateTo(getPreviousTaskState());
+        textToSpeech.reset();
+        obstacleClearing.reset();
     }
-    else if (nodeTiming.getTiming() > 20_s) {
-        setCurrentTaskState(getPreviousTaskState());
-        return;
-    }
-    nodeTiming.incrementTiming();
 }
 
 void TaskControllerNode::measuringTemperature() {
-    static bool haveSpoken = false;
-    if (nodeTiming.getTiming() == 0_s) {
-        delegateSpeaking("测温中。");
-        ROS_INFO("Start measuring temperature.");
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("请将手腕对准温度传感器测量体温。");
+    } else if (textToSpeech.hasEnded && !temperatureMeasurement.hasStarted) {
+        temperatureMeasurement.hasStarted = true;
+        nodeTiming.addTimedTask(3_s, [this]() { temperatureMeasurement.hasEnded = true; }, "测温结束");
+    } else if (textToSpeech.hasEnded && temperatureMeasurement.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::HasMeasuredTemperature);
+        textToSpeech.reset();
+        temperatureMeasurement.reset();
     }
-    else if (nodeTiming.getTiming() > 5_s && !haveSpoken) {
-        delegateSpeaking("测温完成。体温正常。");
-        haveSpoken = true;
-    }
-    else if (nodeTiming.getTiming() >= 10_s) {
-        haveSpoken = false;
-        setCurrentTaskState(TaskState::HaveFinishedPreviousTask);
-        return;
-    }
-    // showTiming();
-    nodeTiming.incrementTiming();
 }
 
-void TaskControllerNode::showTasks() const {
-    if (legacyGeneralTasks.empty())
-        ROS_INFO("No task to do.");
+void TaskControllerNode::hasMeasuredTemperature() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("测温结束，您的体温正常。");
+    } else if (textToSpeech.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::AskingIfVideoNeeded);
+        textToSpeech.reset();
+    }
+}
+
+void TaskControllerNode::showRemainedTasksCount() const {
+    if (currentTaskLegacy.empty())
+        ROS_INFO("没有任务可被执行。");
     else {
-        ROS_INFO("Task to do count: %zd", legacyGeneralTasks.size());
-        std::size_t task_index{1};
-        for (auto const& task : legacyGeneralTasks) {
-            ROS_INFO("Task %zd: %s -> %s", task_index, task.pharmacy.c_str(), task.patient.c_str());
-        }
+        ROS_INFO("剩余任务数量: %zd", legacyGeneralTasks.size() + tasks.size());
     }
 }
 
 void TaskControllerNode::showTiming() const {
-    ROS_INFO("Current timing: %s", nodeTiming.getTiming().toString().c_str());
+    ROS_INFO("当前状态计时: %s", nodeTiming.getCurrentTiming().toString().c_str());
 }
 
 void TaskControllerNode::displayInitializationResult() const {
-    ROS_INFO(
-        "Controller initialized.\n"
-        "baseStationName: %s\n"
-        "stateCheckFrequency: %s\n"
-        "initialPositionCalibrationTime: %s\n"
-        "velocityControlMessagePublisher: %s\n"
-        "behaviorControlMessagePublisher: %s\n"
-        "navigationWaypointMessagePublisher: %s\n"
-        "objectToGrabCoodinateMessagePublisher: %s\n"
-        "manipulatiorControlMessagePublisher: %s\n"
-        "detectedObjectCoordinatesMessageSubscriber: %s\n"
-        "navigationResultMessageSubscriber: %s\n"
-        "objectGrabResultMessageSubscriber: %s\n"
-        "objectMoveTasksMessageSubscriber: %s\n"
-        "taskStateControlMessageSubscriber: %s\n",
-        configs.baseStationName.c_str(),
-        configs.nodeBasicConfig.loopFrequency.toString().c_str(),
-        configs.initialPositionCalibrationTime.toString().c_str(),
-        velocityCommandMessagePublisher.getTopic().c_str(),
-        manipulatiorControlMessagePublisher.getTopic().c_str(),
-        navigationWaypointMessagePublisher.getTopic().c_str(),
-        objectGrabbingCoodinateMessagePublisher.getTopic().c_str(),
-        manipulatiorControlMessagePublisher.getTopic().c_str(),
-        detectedObjectCoordinatesMessageSubscriber.getTopic().c_str(),
-        navigationResultMessageSubscriber.getTopic().c_str(),
-        objectGrabResultMessageSubscriber.getTopic().c_str(),
-        legacyGeneralTasksMessageSubscriber.getTopic().c_str(),
-        taskStateControlMessageSubscriber.getTopic().c_str()
-    );
+    ROS_INFO("任务控制器已初始化。");
 }
 
-void TaskControllerNode::startNextTask() {
-    if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery) {
-        setCurrentTaskState(TaskState::GoingToPharmacy);
+void TaskControllerNode::whenReceivedInitPositionRequest(CoordinateMessagePointer message) {
+    baseStatePosition = Coordinate{message};
+    ROS_INFO("充电基站坐标已初始化。");
+    std::cout << baseStatePosition.toString() << std::endl;
+}
+
+void TaskControllerNode::whenReceivedInitPositionResult(StatusAndDescriptionMessagePointer result) {
+    if (!initPosition.hasStarted) {
+        return;
     }
-    else if (getCurrentTask().getTaskType() == TaskType::Inspection) {
-        setCurrentTaskState(TaskState::GoingToPatient);
-    }
-    else {
-        throw std::runtime_error{""};
+    if (result->status == StatusAndDescriptionMessage::done) {
+        initPosition.hasEnded = true;
     }
 }
 
-void TaskControllerNode::whenReceivedObjectDetectionResult(ObjectDetectionResultMessasgePointer coordinates_ptr) {
-    if (getCurrentTaskState() == TaskState::DetectingMedicine) {
-        displayDetectedObjects(coordinates_ptr);
+void TaskControllerNode::whenReceivedMappingTaskRequest(MappingTaskMessagePointer message) {
+    tasks.emplace_back(std::make_unique<MappingTask>(message));
+    currentTaskLegacy.emplace_back(false);
+}
 
-        constexpr std::size_t nearest_object_index{0};
-        Coordinate coord{
-            coordinates_ptr->x[nearest_object_index],
-            coordinates_ptr->y[nearest_object_index],
-            coordinates_ptr->z[nearest_object_index]
-        };
-        getCurrentTask().medicinePosition = coord;
-        ROS_INFO("temp coordinate:\n%s", coord.toString().c_str());
-        ROS_INFO("Current task coordinate:\n%s", getCurrentTask().medicinePosition.toString().c_str());
-        delegateChangingRobotBehavior(ObjectDetectionControl::Stop);
-        setCurrentTaskState(TaskState::PerformingObjectGrab);
+void TaskControllerNode::whenReceivedInspectionTaskRequest(InspectionTaskMessagePointer message) {
+    tasks.emplace_back(std::make_unique<InspectionTask>(message));
+    currentTaskLegacy.emplace_back(false);
+}
+
+void TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest(MedicineDeliveryTaskMessagePointer message) {
+    tasks.emplace_back(std::make_unique<MedicineDeliveryTask>(message));
+    currentTaskLegacy.emplace_back(false);
+}
+
+void TaskControllerNode::whenReceivedMedicineDetectionResult(ObjectDetectionResultMessasgePointer coordinates) {
+    if (!medicineDetection.hasStarted) {
+        return;
     }
-    else {
-        ROS_DEBUG("Discard object detection result because of unmatching state.");
+    displayDetectedObjects(coordinates);
+    constexpr std::size_t nearest_object_index{0};
+    medicineDetection.medicinePosition = Coordinate{
+        coordinates->x[nearest_object_index], coordinates->y[nearest_object_index], coordinates->z[nearest_object_index]
+    };
+    medicineDetection.end();
+}
+
+void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer message) {
+    if (!waypointNavigation.hasStarted) {
+        return;
+    }
+    if (message->data == "done") {
+        waypointNavigation.end();
+    } else {
+        waypointNavigation.fail();
     }
 }
 
-void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer message_ptr) {
-    if (message_ptr->data == "done")
-        if (getCurrentTaskState() == TaskState::GoingToPharmacy) {
-            ROS_INFO(
-                "Arrived pharmacy: %s (Spent time: %s)",
-                getCurrentTask().pharmacy.c_str(),
-                nodeTiming.getTiming().toString().c_str()
-            );
-            setCurrentTaskState(TaskState::DetectingMedicine);
-        }
-        else if (getCurrentTaskState() == TaskState::GoingToPatient) {
-            ROS_INFO(
-                "Arrived patient: %s (Spent time: %s)",
-                getCurrentTask().patient.c_str(),
-                nodeTiming.getTiming().toString().c_str()
-            );
-            if (getCurrentTask().getTaskType() == TaskType::MedicineDelivery)
-                setCurrentTaskState(TaskState::DeliveringMedicine);
-            else if (getCurrentTask().getTaskType() == TaskType::Inspection)
-                setCurrentTaskState(TaskState::MeasuringTemperature);
-            else
-                throw std::runtime_error{""};
-        }
-        else if (getCurrentTaskState() == TaskState::GoingToBaseStation) {
-            ROS_INFO(
-                "Arrived base station: %s (Spent time: %s)",
-                configs.baseStationName.c_str(),
-                nodeTiming.getTiming().toString().c_str()
-            );
-            setCurrentTaskState(TaskState::ReadyToPerformTasks);
-        }
-        else {
-            ROS_DEBUG("Discard navigation result because of unmatching state.");
-        }
-    else if (message_ptr->data == "failure") {
-        if (getCurrentTaskState() == TaskState::GoingToPharmacy) {
-            ROS_INFO(
-                "Failed to arrive pharmacy: %s (Spent time: %s)",
-                getCurrentTask().pharmacy.c_str(),
-                nodeTiming.getTiming().toString().c_str()
-            );
-            setCurrentTaskState(TaskState::WaypointUnreachable);
-        }
-        else if (getCurrentTaskState() == TaskState::GoingToPatient) {
-            ROS_INFO(
-                "Failed to arrive patient: %s (Spent time: %s)",
-                getCurrentTask().patient.c_str(),
-                nodeTiming.getTiming().toString().c_str()
-            );
-            setCurrentTaskState(TaskState::WaypointUnreachable);
-        }
-        else if (getCurrentTaskState() == TaskState::GoingToBaseStation && legacyGeneralTasks.empty()) {
-            ROS_INFO(
-                "Failed to arrive base station: %s (Spent time: %s)",
-                configs.baseStationName.c_str(),
-                nodeTiming.getTiming().toString().c_str()
-            );
-            setCurrentTaskState(TaskState::WaypointUnreachable);
-        }
-        else {
-            ROS_DEBUG("Discard navigation result because of unmatching state.");
-        }
+void TaskControllerNode::whenReceivedMedicineGraspResult(StringMessagePointer message) {
+    if (!medicineGrasp.hasStarted) {
+        return;
     }
-    else {
-        ROS_DEBUG("Discard navigation result: %s", message_ptr->data.c_str());
-    }
-}
-
-void TaskControllerNode::whenReceivedObjectGrabResult(StringMessagePointer message_ptr) {
-    if (message_ptr->data == "done") {
-        if (getCurrentTaskState() == TaskState::PerformingObjectGrab) {
-            ROS_INFO("Grab object done!");
-            setCurrentTaskState(TaskState::GoingToPatient);
-        }
-        else {
-            ROS_DEBUG("Discard object grab result because of unmatching state.");
-        }
-    }
-    else {
-        ROS_DEBUG("Discarded object grab result: %s", message_ptr->data.c_str());
+    if (message->data == "done") {
+        medicineGrasp.end();
+    } else {
+        medicineGrasp.fail();
     }
 }
 
 void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message) {
     legacyGeneralTasks.emplace_back(LegacyGeneralTask{message});
-    ROS_INFO("Added a task:\n%s", legacyGeneralTasks.front().toString().c_str());
+    currentTaskLegacy.emplace_back(true);
+    ROS_INFO("收到一个任务:\n%s", legacyGeneralTasks.back().toString().c_str());
 }
 
-void TaskControllerNode::whenReceivedStateControlCommand(StringMessagePointer message_ptr) {
-    if (message_ptr->data == "clear") {
-        legacyGeneralTasks.clear();
-        ROS_INFO("Cancelled all tasks.");
-        setCurrentTaskState(TaskState::RetractingTheArm);
+void TaskControllerNode::whenReceivedStateControlCommand(StringMessagePointer message) {
+    if (message->data == "clear") {
+        while (legacyGeneralTasks.size() > 1) {
+            legacyGeneralTasks.pop_back();
+        }
+        ROS_INFO("已取消当前任务，并清除剩余任务。");
+        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
     }
 }
 
-void TaskControllerNode::delegateControlingRobotVelocity(LinearSpeed target) {
-    ROS_INFO(
-        "Notified subscriber of %s to set velocity to %s.",
-        velocityCommandMessagePublisher.getTopic().c_str(),
-        target.toString().c_str()
-    );
-    VelocityCommand velocityCommand{target, 0_m_per_s, 0_deg_per_s};
-    velocityCommandMessagePublisher.publish(velocityCommand.toMessage());
+void TaskControllerNode::whenReceivedTextToSpeechResult(StatusAndDescriptionMessagePointer message) {
+    if (!textToSpeech.hasStarted) {
+        return;
+    }
+    if (message->status == StatusAndDescriptionMessage::done) {
+        textToSpeech.end();
+    } else {
+        textToSpeech.fail();
+    }
 }
 
-void TaskControllerNode::delegateChangingRobotBehavior(ObjectDetectionControl behavior) {
-    ROS_INFO(
-        "Notified subscriber of %s to change behavior to %s.",
-        objectDetectionControlMessagePublisher.getTopic().c_str(),
-        toString(behavior).c_str()
-    );
-    objectDetectionControlMessagePublisher.publish(createObjectDetectionControlMessage(behavior));
+void TaskControllerNode::whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessagePointer message) {
+    if (!speechReognition.hasStarted) {
+        return;
+    }
+    if (message->status == StatusAndDescriptionMessage::done) {
+        ROS_DEBUG("语音识别结果: %s", message->description.c_str());
+        speechReognition.foundYes = message->description.find("是") != std::string::npos;
+        speechReognition.foundNo = message->description.find("否") != std::string::npos;
+        speechReognition.end();
+    } else {
+        speechReognition.fail();
+    }
+}
+
+void TaskControllerNode::delegateVelocityControl(LinearSpeed forward) {
+    velocityControl.hasStarted = true;
+    ROS_DEBUG("将前进速度设置为 %s。", forward.toString().c_str());
+    VelocityCommand velocityCommand{forward, 0_m_per_s, 0_deg_per_s};
+    velocityControlRequestPublisher.publish(velocityCommand.toMessage());
+}
+
+void TaskControllerNode::delegateObjectDetectionControl(ObjectDetectionControl behavior) {
+    switch (behavior) {
+    case ObjectDetectionControl::Start:
+        medicineDetection.start();
+        break;
+    case ObjectDetectionControl::Stop:
+        medicineDetection.end();
+        break;
+    }
+    ROS_DEBUG("%s。", toString(behavior).c_str());
+    medicineDetectionRequestPublisher.publish(createObjectDetectionControlMessage(behavior));
 }
 
 void TaskControllerNode::delegateNavigatingToWaypoint(std::string waypointName) {
-    ROS_INFO(
-        "Notified subscriber of %s to navigate to %s.",
-        navigationWaypointMessagePublisher.getTopic().c_str(),
-        waypointName.c_str()
-    );
-    navigationWaypointMessagePublisher.publish(createWaypointMessage(std::move(waypointName)));
+    waypointNavigation.hasStarted = true;
+    ROS_DEBUG("将导航至 %s。", waypointName.c_str());
+    waypointNavigationRequestPublisher.publish(createWaypointMessage(std::move(waypointName)));
 }
 
 void TaskControllerNode::delegateControlingRobotManipulator(ManipulatorControl const& plan) {
-    ROS_INFO(
-        "Notified subscriber of %s to set manipulator state to %s.",
-        manipulatiorControlMessagePublisher.getTopic().c_str(),
-        plan.toString().c_str()
-    );
-    manipulatiorControlMessagePublisher.publish(plan.toMessage());
+    manipulatorControl.hasStarted = true;
+    ROS_DEBUG("将把机械臂状态设置为 %s。", plan.toString().c_str());
+    manipulatiorControlRequestPublisher.publish(plan.toMessage());
 }
 
-void TaskControllerNode::delegateObjectGrabbing(Coordinate coordinate) {
-    ROS_INFO(
-        "Notified subscriber of %s to grab object at %s.",
-        objectGrabbingCoodinateMessagePublisher.getTopic().c_str(),
-        coordinate.toString().c_str()
-    );
-    objectGrabbingCoodinateMessagePublisher.publish(coordinate.toMessage());
+void TaskControllerNode::delegateObjectGrasping(Coordinate coordinate) {
+    medicineGrasp.hasStarted = true;
+    ROS_DEBUG("将抓取位于 %s 的物体。", coordinate.toString().c_str());
+    medicineGraspRequestPublisher.publish(coordinate.toMessage());
 }
 
-void TaskControllerNode::delegateSpeaking(std::string content) {
-    std::printf(
-        "Notified subscriber of %s to speak %s.\n", speakTextMessagePublisher.getTopic().c_str(), content.c_str()
-    );
+void TaskControllerNode::delegateTextToSpeech(std::string content) {
+    textToSpeech.hasStarted = true;
+    ROS_DEBUG("将以下内容转为语音：%s.", content.c_str());
     StringMessage message;
     message.data = content;
-    speakTextMessagePublisher.publish(message);
+    textToSpeechRequestPublisher.publish<StringMessage>(message);
+}
+
+void TaskControllerNode::delegateSpeechRecognition(Duration duration) {
+    speechReognition.hasStarted = true;
+    StringMessage request;
+    request.data = std::to_string(duration.getBaseUnitValue());
+    speechRecognitionRequestPublisher.publish<StringMessage>(request);
 }
 
 StringMessage TaskControllerNode::createWaypointMessage(std::string name) {
@@ -612,41 +903,61 @@ void TaskControllerNode::displayDetectedObjects(ObjectDetectionResultMessasgePoi
 std::string TaskControllerNode::toString(ObjectDetectionControl behavior) {
     switch (behavior) {
     case ObjectDetectionControl::Start:
-        return "Start Object Detection";
+        return "开启物体检测";
     case ObjectDetectionControl::Stop:
-        return "Stop Object Detection";
+        return "停止物体检测";
     }
+    return "";
 }
 
 std::string TaskControllerNode::toString(TaskState taskState) {
     switch (taskState) {
     case TaskState::CalibratingInitialPosition:
-        return "Calibrating Initial Position";
+        return "校准初始位置中";
     case TaskState::ReadyToPerformTasks:
-        return "Ready To Perform Tasks";
+        return "准备就绪";
     case TaskState::GoingToPharmacy:
-        return "Going To Storage";
+        return "前往药房中";
     case TaskState::DetectingMedicine:
-        return "Detecting Objects";
-    case TaskState::PerformingObjectGrab:
-        return "Performing Object Grab";
+        return "检测药品位置中";
+    case TaskState::GraspingMedicine:
+        return "抓取药品中";
     case TaskState::GoingToPatient:
-        return "Going To Patient Place";
-    case TaskState::DeliveringMedicine:
-        return "Performing Object Drop-Off";
-    case TaskState::MovingBackward:
-        return "Stepping Backward";
+        return "前往患者所在位置中";
+    case TaskState::DroppingMedicine:
+        return "投递药品中";
+    case TaskState::SteppingBackward:
+        return "后撤中";
     case TaskState::RetractingTheArm:
-        return "Retracting The Arm";
+        return "收回机械臂中";
     case TaskState::HaveFinishedPreviousTask:
-        return "Have Finished Previous Task";
+        return "已完成上一个任务";
     case TaskState::GoingToBaseStation:
-        return "Going To Base Station";
+        return "前往充电基站";
     case TaskState::WaypointUnreachable:
-        return "Waypoint Unreachable";
+        return "航点不可达";
     case TaskState::MeasuringTemperature:
-        return "Measuring Temperature";
+        return "测量体温中";
+    case TaskState::AskingIfVideoNeeded:
+        return "询问患者是否需要视频通话";
+    case TaskState::VideoCommunicating:
+        return "视频通话中";
+    case TaskState::HasMeasuredTemperature:
+        return "已测量患者体温";
+    case TaskState::ConfirmPatientRequest:
+        return "确认患者语音";
+    case TaskState::SpeechRecognitionFailed:
+        return "语音识别失败。";
+    case TaskState::GiveUpCurrentTask:
+        return "放弃当前任务";
+    case TaskState::SpeakingPrescription:
+        return "播放医嘱中";
+    case TaskState::AskingIfGrabbedMedicine:
+        return "询问患者是由已抓取药品";
+    case TaskState::WaitingForGrabbingMedicine:
+        return "等待患者抓取药品";
     }
+    return "";
 }
 }  // namespace Nodes
 }  // namespace xiaohu_robot

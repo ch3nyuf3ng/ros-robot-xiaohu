@@ -1,4 +1,5 @@
 <launch>
-    <node pkg="xiaohu_robot" type="xfyun_tts_node" name="xfyun_tts_node" />
+    <node pkg="xiaohu_robot" type="tts_node" name="tts_node" launch-prefix="nice" output="screen" />
+    <node pkg="xiaohu_robot" type="asr_node" name="asr_node" launch-prefix="nice" output="screen" />
     <node pkg="sound_play" type="soundplay_node.py" name="soundplay_node" />
 </launch>

@@ -1,5 +1,4 @@
 <launch>
     <include file="$(find xiaohu_robot)/navigation/amcl.launch" />
     <include file="$(find xiaohu_robot)/navigation/move_base.launch"/>
-    <include file="$(find xiaohu_robot)/navigation/waterplus.launch"/>
 </launch>

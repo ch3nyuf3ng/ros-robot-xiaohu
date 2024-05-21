@@ -1,55 +1,61 @@
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
-#include <algorithm>
 #include <sstream>
 #include <utility>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-// MappingTask::MappingTask(std::string mapName, std::string savePath):
-//     mapName{std::move(mapName)},
-//     savePath{std::move(savePath)} {}
+MappingTask::MappingTask(MappingTaskMessagePointer message):
+    taskId{message->taskId} {}
 
-// MappingTask::MappingTask(MappingTaskMessagePointer message):
-//     mapName{std::move(message->mapName)},
-//     savePath{std::move(message->savePath)} {}
-
-MedicineDeliverySingleTask::MedicineDeliverySingleTask(Coordinate pharmacy, Coordinate patient):
-    pharmacy{std::move(pharmacy)},
-    patient{std::move(patient)} {}
-
-MedicineDeliverySingleTask::MedicineDeliverySingleTask(MedicineDeliverySingleTaskMessage message):
-    pharmacy{std::move(Coordinate{message.pharmacy})},
-    patient{std::move(Coordinate{message.patient})} {}
-
-std::string MedicineDeliverySingleTask::toString() const {
+std::string MappingTask::toString() const {
     std::ostringstream oss;
-    oss << "Pharmacy:\n" << pharmacy.toString() << "Patient:\n" << patient.toString();
+    oss << "建图任务(" << taskId << ")";
     return oss.str();
 }
 
-MedicineDeliveryTasks::MedicineDeliveryTasks(MedicineDeliveryTasksMessagePointer message) {
-    std::deque<MedicineDeliverySingleTask> tasks;
-    std::transform(
-        message->tasks.begin(),
-        message->tasks.end(),
-        tasks.begin(),
-        [](MedicineDeliverySingleTaskMessage m) { return MedicineDeliverySingleTask{m}; }
-    );
-    this->tasks = std::move(tasks);
+TaskType MappingTask::getTaskType() const {
+    return TaskType::Mapping;
 }
 
-std::string MedicineDeliveryTasks::toString() const {
+InspectionTask::InspectionTask(InspectionTaskMessagePointer message):
+    taskId{message->taskId},
+    patientName{message->patientName},
+    patientPosition{message->patientPosition} {}
+
+std::string InspectionTask::toString() const {
     std::ostringstream oss;
-    oss << "MedicineDeliveryTasks{\n";
-    for (MedicineDeliverySingleTask const& task : tasks) {
-        oss << task.toString() << "\n";
-    }
+    oss << "巡诊任务(" << taskId << ") {\n";
+    oss << "患者姓名：" << patientName << ",\n";
+    oss << "患者位置：" << patientPosition.toString() << "\n";
     oss << "}";
     return oss.str();
 }
 
-TaskType MedicineDeliveryTasks::getTaskType() const {
+TaskType InspectionTask::getTaskType() const {
+    return TaskType::Inspection;
+}
+
+MedicineDeliveryTask::MedicineDeliveryTask(MedicineDeliveryTaskMessagePointer message):
+    taskId{message->taskId},
+    prescription{message->prescription},
+    pharmacyName{message->pharmacyName},
+    pharmacyPosition{message->pharmacyPosition},
+    patientName{message->patientName},
+    patientPosition{message->patientPosition} {}
+
+std::string MedicineDeliveryTask::toString() const {
+    std::ostringstream oss;
+    oss << "送药任务(" << taskId << ") {\n";
+    oss << "医嘱：" << prescription << ",\n";
+    oss << "药房名称：" << pharmacyName << ",\n";
+    oss << "药房位置：" << pharmacyPosition.toString() << "\n";
+    oss << "患者姓名：" << patientName << ",\n";
+    oss << "患者位置：" << patientPosition.toString() << "\n";
+    return oss.str();
+}
+
+TaskType MedicineDeliveryTask::getTaskType() const {
     return TaskType::MedicineDelivery;
 }
 
@@ -95,12 +101,13 @@ TaskType LegacyGeneralTask::getTaskType() const {
 }
 
 TaskType toType(std::string type) {
-    if (type == "Mapping")
+    if (type == "Mapping") {
         return TaskType::Mapping;
-    else if (type == "Inspection")
+    } else if (type == "Inspection") {
         return TaskType::Inspection;
-    else
+    } else {
         return TaskType::MedicineDelivery;
+    }
 }
 
 std::string toString(TaskType type) {
@@ -112,6 +119,7 @@ std::string toString(TaskType type) {
     case TaskType::MedicineDelivery:
         return "MedicineDeliveryTasks";
     }
+    return "";
 }
 }  // namespace Foundation
 }  // namespace xiaohu_robot

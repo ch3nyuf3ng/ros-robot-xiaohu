@@ -26,8 +26,9 @@ VelocityCommandMessage VelocityCommand::toMessage() const {
 
 std::string VelocityCommand::toString() const {
     std::ostringstream oss;
-    oss << "LinearSpeed x: " << forwardBackwardAxis << ", LinearSpeed y: " << leftRightAxis
-        << ", AngularSpeed z: " << rotationAxis;
+    oss << "LinearSpeed x: " << forwardBackwardAxis << ", ";
+    oss << "LinearSpeed y: " << leftRightAxis << ", ";
+    oss << "AngularSpeed z: " << rotationAxis;
     return oss.str();
 }
 }  // namespace Foundation

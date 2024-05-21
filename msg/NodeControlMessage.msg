@@ -1,4 +1,5 @@
 # xiaohu_robot::NodeControlMessage
+string next=next
 
-string node
+string state
 string control

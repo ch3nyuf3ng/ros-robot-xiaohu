@@ -8,7 +8,6 @@
     <include file="$(find xiaohu_robot)/navigation/navigation.launch" />
     <include file="$(find xiaohu_robot)/voice/voice.launch" />
     <include file="$(find xiaohu_robot)/gazebo/gazebo.launch" />
-    <include file="$(find xiaohu_robot)/rviz/rviz.launch" />
     <include file="$(find xiaohu_robot)/functions/object_detect.launch" />
     <include file="$(find xiaohu_robot)/functions/object_grab.launch" />
     <include file="$(find xiaohu_robot)/launch/xiaohu_nodes.launch" />

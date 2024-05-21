@@ -1,2 +1,0 @@
-# MedicineDeliveryTasksMessages.msg
-xiaohu_robot/MedicineDeliverySingleTaskMessage[] tasks

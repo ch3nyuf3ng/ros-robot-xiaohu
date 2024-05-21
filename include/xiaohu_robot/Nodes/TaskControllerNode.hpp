@@ -2,6 +2,7 @@
 
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
+
 #include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
@@ -15,41 +16,33 @@ namespace xiaohu_robot {
 inline namespace Nodes {
 class TaskControllerNode final: public Runnable {
 public:
-    struct Config final {
-        Duration initialPositionCalibrationTime;
-        std::string baseStationName;
-        std::string velocityCommandTopic;
-        std::string objectDetectionControlTopic;
-        std::string navigationWaypointTopic;
-        std::string objectGrabbingCoordinateTopic;
-        std::string manipulatorControlTopic;
-        std::string detectedObjectCoordinatesTopic;
-        std::string navigationResultTopic;
-        std::string objectGrabbingResultTopic;
-        std::string legacyGeneralTasksTopic;
-        std::string speakTextTopic;
-        std::string moveBaseTopic;
-        NodeBasicConfig nodeBasicConfig;
-
-        Config(
-            Duration initialPositionCalibrationTime,
-            std::string baseStationName = CommonConfigs::baseStationName,
-            std::string velocityCommandTopic = CommonConfigs::velocityCommandTopic,
-            std::string objectDetectionControlTopic = CommonConfigs::objectDetectionControlTopic,
-            std::string navigationWaypointTopic = CommonConfigs::navigationWaypointTopic,
-            std::string objectGrabbingCoordinateTopic = CommonConfigs::objectGrabbingCoodinateTopic,
-            std::string manipulatorControlTopic = CommonConfigs::manipulatorControlTopic,
-            std::string detectedObjectCoordinatesTopic = CommonConfigs::detectedObjectCoordinatesTopic,
-            std::string navigationResultTopic = CommonConfigs::navigationResultTopic,
-            std::string objectGrabbingResultTopic = CommonConfigs::objectGrabbingResultTopic,
-            std::string legacyGeneralTasksTopic = CommonConfigs::legacyGeneralTasksTopic,
-            std::string speakTextTopic = CommonConfigs::speakTextTopic,
-            std::string moveBaseTopic = CommonConfigs::moveBaseTopic,
-            NodeBasicConfig nodeBasicConfig = NodeBasicConfig{}
-        );
+    struct Configs final {
+        std::string baseStationName{CommonConfigs::baseStationName};
+        std::string legacyGeneralTasksRequestTopic{CommonConfigs::legacyGeneralTasksRequestTopic};
+        std::string mappingTaskRequestTopic{CommonConfigs::mappingTaskRequestTopic};
+        std::string inspectionTaskRequestTopic{CommonConfigs::inspectionTaskRequestTopic};
+        std::string medicineDeliveryTaskRequestTopic{CommonConfigs::medicineDeliveryTaskRequestTopic};
+        std::string initPositionRequestTopic{CommonConfigs::initPositionRequestTopic};
+        std::string initPositionResultTopic{CommonConfigs::initPositionResultTopic};
+        std::string coordinateNavigationTopic{CommonConfigs::coordinateNavigationTopic};
+        std::string velocityControlRequestTopic{CommonConfigs::velocityControlRequestTopic};
+        std::string manipulatorControlRequestTopic{CommonConfigs::manipulatorControlRequestTopic};
+        std::string medcineDetectionRequestTopic{CommonConfigs::medcineDetectionRequestTopic};
+        std::string medicineDetectionResultTopic{CommonConfigs::medicineDetectionResultTopic};
+        std::string waypointNavigationRequestTopic{CommonConfigs::waypointNavigationRequestTopic};
+        std::string waypointNavigationResultTopic{CommonConfigs::waypointNavigationResultTopic};
+        std::string textToSpeechRequestTopic{CommonConfigs::textToSpeechRequestTopic};
+        std::string textToSpeechResultTopic{CommonConfigs::textToSpeechResultTopic};
+        std::string medicineGraspRequestTopic{CommonConfigs::medicineGraspRequestTopic};
+        std::string medicineGraspResultTopic{CommonConfigs::medicineGraspResultTopic};
+        std::string speechRecognitionRequestTopic{CommonConfigs::speechRecognitionRequestTopic};
+        std::string speechRecognitionResultTopic{CommonConfigs::speechRecognitionResultTopic};
+        std::string voiceRecognitionRequestTopic{CommonConfigs::speechRecognitionRequestTopic};
+        NodeBasicConfigs nodeBasicConfig{};
     };
 
-    TaskControllerNode(Config);
+    TaskControllerNode(Configs);
+    ~TaskControllerNode();
     void run() override;
 
 private:
@@ -58,15 +51,24 @@ private:
         ReadyToPerformTasks,
         GoingToPharmacy,
         DetectingMedicine,
-        PerformingObjectGrab,
+        GraspingMedicine,
         GoingToPatient,
         MeasuringTemperature,
-        DeliveringMedicine,
-        MovingBackward,
+        HasMeasuredTemperature,
+        AskingIfVideoNeeded,
+        ConfirmPatientRequest,
+        VideoCommunicating,
+        SpeakingPrescription,
+        AskingIfGrabbedMedicine,
+        DroppingMedicine,
+        SteppingBackward,
+        WaitingForGrabbingMedicine,
         RetractingTheArm,
         HaveFinishedPreviousTask,
         GoingToBaseStation,
-        WaypointUnreachable
+        SpeechRecognitionFailed,
+        WaypointUnreachable,
+        GiveUpCurrentTask,
     };
 
     enum class ObjectDetectionControl {
@@ -74,63 +76,159 @@ private:
         Stop
     };
 
-    Config configs;
+    struct TaskStateContext final {
+        TaskState currentTaskState{TaskState::CalibratingInitialPosition};
+        TaskState previousTaskState{TaskState::CalibratingInitialPosition};
+        bool stateTransferring{false};
+    };
+
+    struct DelegationState {
+        bool hasStarted{false};
+        bool hasFailed{false};
+        bool hasEnded{false};
+
+        virtual ~DelegationState() = default;
+        virtual void reset();
+
+        void start();
+        void end();
+        void fail();
+    };
+
+    struct SpeechRecognitionContext final: public DelegationState {
+        bool foundYes{false};
+        bool foundNo{false};
+
+        void reset() override;
+    };
+
+    struct MedicineDetectionAndGraspContext final: public DelegationState {
+        Coordinate medicinePosition{};
+
+        void reset() override;
+    };
+
+    struct UnsupportedTaskException final: public std::runtime_error {
+        UnsupportedTaskException():
+            std::runtime_error("未支持的任务类型") {}
+    };
+
     NodeHandle nodeHandle;
     NodeTiming nodeTiming;
-    TaskState currentTaskState;
-    TaskState previousTaskState;
+
+    DelegationState initPosition;
+    Coordinate baseStatePosition;
+    Subscriber const initPositionRequestSubscriber;
+    Subscriber const initPositionResultSubscriber;
+
+    TaskStateContext taskState;
+    std::deque<bool> currentTaskLegacy;
     std::deque<LegacyGeneralTask> legacyGeneralTasks;
-    MessagePublisher const velocityCommandMessagePublisher;
-    MessagePublisher const objectDetectionControlMessagePublisher;
-    MessagePublisher const navigationWaypointMessagePublisher;
-    MessagePublisher const objectGrabbingCoodinateMessagePublisher;
-    MessagePublisher const manipulatiorControlMessagePublisher;
-    MessagePublisher const speakTextMessagePublisher;
-    MessageSubscriber const detectedObjectCoordinatesMessageSubscriber;
-    MessageSubscriber const navigationResultMessageSubscriber;
-    MessageSubscriber const objectGrabResultMessageSubscriber;
-    MessageSubscriber const legacyGeneralTasksMessageSubscriber;
-    MessageSubscriber const taskStateControlMessageSubscriber;
+    Subscriber const legacyGeneralTaskRequestSubscriber;
+    std::deque<std::unique_ptr<SpecificTask>> tasks;
+    Subscriber const inspectionTaskRequestSubscriber;
+    Subscriber const mappingTaskRequestSubscriber;
+    Subscriber const medicineDeliveryRequestSubsriber;
+
+    DelegationState velocityControl;
+    Publisher const velocityControlRequestPublisher;
+
+    DelegationState manipulatorControl;
+    Publisher const manipulatiorControlRequestPublisher;
+
+    DelegationState waypointNavigation;
+    Publisher const waypointNavigationRequestPublisher;
+    Subscriber const waypointNavigationResultSubscriber;
+    int waypointUnreachableTimes;
+
+    DelegationState obstacleClearing;
+    DelegationState navigation;
     NavigationClient navigationClient;
 
-    LegacyGeneralTask& getCurrentTask();
+    DelegationState textToSpeech;
+    Publisher const textToSpeechRequestPublisher;
+    Subscriber const textToSpeechResultSubscriber;
+
+    SpeechRecognitionContext speechReognition;
+    Publisher const speechRecognitionRequestPublisher;
+    Subscriber const speechRecognitionResultSubscriber;
+    int speechRecognitionContinuousFailureTimes;
+
+    MedicineDetectionAndGraspContext medicineDetection;
+    Publisher const medicineDetectionRequestPublisher;
+    Subscriber const medicineDetectionResultSubscriber;
+
+    MedicineDetectionAndGraspContext medicineGrasp;
+    Publisher const medicineGraspRequestPublisher;
+    Subscriber const medicineGraspResultSubscriber;
+    
+    SoundplayClient soundPlayClient;
+
+    DelegationState waiting;
+    DelegationState exceptionHandling;
+    DelegationState temperatureMeasurement;
+
+    Configs configs;
+
+    bool isCurrentTaskLegacy() const;
+    SpecificTask& getCurrentTask();
+    LegacyGeneralTask& getCurrentLegacyTask();
+    MappingTask& getCurrentMappingTask();
+    InspectionTask& getCurrentInspectionTask();
+    MedicineDeliveryTask& getCurrentMedicineDeliveryTask();
     TaskState getCurrentTaskState() const;
     TaskState getPreviousTaskState() const;
-    void setCurrentTaskState(TaskState nextState);
+    void transferCurrentTaskStateTo(TaskState nextState);
     void setPreviousTaskState(TaskState previousState);
+    void checkNavigationState();
 
     void startInitialPositionCalibration();
     void readyToPerformTasks();
     void goToPharmacy();
     void detectMedicine();
-    void performingObjectGrab();
+    void graspMedicine();
     void goToPatient();
-    void deliverMedicine();
+    void dropMedicine();
     void stepBackward();
     void retractManipulaor();
     void haveFinishedPreviousTask();
     void goToBaseStation();
     void waypointUnreachable();
     void measuringTemperature();
+    void hasMeasuredTemperature();
+    void askIfVideoNeeded();
+    void confirmPatientRequest();
+    void videoCommunicating();
+    void speechRecognitionFailed();
+    void giveUpCurrentTask();
+    void speakPrescription();
+    void askIfGrabbedMedicine();
+    void waitForGrabbingMedicine();
 
-    void startNextTask();
-
-    void showTasks() const;
+    void showRemainedTasksCount() const;
     void showTiming() const;
     void displayInitializationResult() const;
 
-    void whenReceivedObjectDetectionResult(ObjectDetectionResultMessasgePointer coordinates_ptr);
-    void whenReceivedNavigationResult(StringMessagePointer message_ptr);
-    void whenReceivedObjectGrabResult(StringMessagePointer message_ptr);
-    void whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message);
-    void whenReceivedStateControlCommand(StringMessagePointer message_ptr);
+    void whenReceivedInitPositionRequest(CoordinateMessagePointer);
+    void whenReceivedInitPositionResult(StatusAndDescriptionMessagePointer);
+    void whenReceivedMappingTaskRequest(MappingTaskMessagePointer);
+    void whenReceivedInspectionTaskRequest(InspectionTaskMessagePointer);
+    void whenReceivedMedicineDeliveryTaskRequest(MedicineDeliveryTaskMessagePointer);
+    void whenReceivedMedicineDetectionResult(ObjectDetectionResultMessasgePointer);
+    void whenReceivedNavigationResult(StringMessagePointer);
+    void whenReceivedMedicineGraspResult(StringMessagePointer);
+    void whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer);
+    void whenReceivedStateControlCommand(StringMessagePointer);
+    void whenReceivedTextToSpeechResult(StatusAndDescriptionMessagePointer);
+    void whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessagePointer);
 
-    void delegateControlingRobotVelocity(LinearSpeed target);
-    void delegateChangingRobotBehavior(ObjectDetectionControl target);
+    void delegateVelocityControl(LinearSpeed forward);
+    void delegateObjectDetectionControl(ObjectDetectionControl target);
     void delegateNavigatingToWaypoint(std::string target);
     void delegateControlingRobotManipulator(ManipulatorControl const& target);
-    void delegateObjectGrabbing(Coordinate coordinate);
-    void delegateSpeaking(std::string content);
+    void delegateObjectGrasping(Coordinate coordinate);
+    void delegateTextToSpeech(std::string content);
+    void delegateSpeechRecognition(Duration duration);
 
     static void displayDetectedObjects(ObjectDetectionResultMessasgePointer coordinates_ptr);
     static StringMessage createWaypointMessage(std::string name);

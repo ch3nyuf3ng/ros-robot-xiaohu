@@ -83,8 +83,7 @@ void ManiHeight(float inHeight) {
         }
         joint_pos_msg.data = fLiftPos;
         mani_base_pub.publish(joint_pos_msg);
-    }
-    else {
+    } else {
         joint_pos_msg.data = 0;
         elbow_forearm_pub.publish(joint_pos_msg);
         joint_pos_msg.data = 0;

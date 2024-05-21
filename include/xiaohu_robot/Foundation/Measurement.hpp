@@ -4,7 +4,7 @@
 #define XIAOHU_ROBOT_FOUNDATION_MEASUREMENT_HPP
 
 #include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
-#include <istream>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -112,8 +112,7 @@ public:
         try {
             auto& other{dynamic_cast<LinearConvertibleUnitBase const&>(object)};
             return other.symbol == symbol && other.converter->equals(*converter);
-        }
-        catch (std::bad_cast const&) {
+        } catch (std::bad_cast const&) {
             return false;
         }
     }
@@ -136,6 +135,7 @@ public:
 
 class UnitDuration final: public LinearConvertibleUnitBase<UnitDuration> {
 public:
+    static std::shared_ptr<UnitDuration const> const microseconds;
     static std::shared_ptr<UnitDuration const> const milliseconds;
     static std::shared_ptr<UnitDuration const> const seconds;
     static std::shared_ptr<UnitDuration const> const minutes;
@@ -206,8 +206,8 @@ public:
         return value;
     }
 
-    void set_value(double value) {
-        this->value = std::move(value);
+    void setValue(double value) {
+        this->value = value;
     }
 
     template<typename T = UnitType, typename = std::enable_if_t<std::is_base_of<ConvertibleUnit, T>::value>>
@@ -286,14 +286,12 @@ public:
         return operator+=(-rhs);
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
-    Measurement& operator*=(T rhs) {
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>> Measurement& operator*=(T rhs) {
         value *= rhs;
         return *this;
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
-    Measurement& operator/=(T rhs) {
+    template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>> Measurement& operator/=(T rhs) {
         value /= rhs;
         return *this;
     }
@@ -428,9 +426,7 @@ public:
 
     template<typename T = UnitType, std::enable_if_t<std::is_same<T, UnitDuration>::value, bool> = true>
     Measurement<UnitFrequency> accordingFrequency() const {
-        return Measurement<UnitFrequency>{
-            1 / getBaseUnitValue(), UnitFrequency::getBaseUnit()->shared_from_this()
-        };
+        return Measurement<UnitFrequency>{1 / getBaseUnitValue(), UnitFrequency::getBaseUnit()->shared_from_this()};
     }
 
 private:
@@ -502,6 +498,14 @@ inline Measurement<UnitDuration> operator""_ms(unsigned long long v) {
 
 inline Measurement<UnitDuration> operator""_ms(long double v) {
     return Measurement<UnitDuration>{static_cast<double>(v), UnitDuration::milliseconds};
+}
+
+inline Measurement<UnitDuration> operator""_us(unsigned long long v) {
+    return Measurement<UnitDuration>{static_cast<double>(v), UnitDuration::microseconds};
+}
+
+inline Measurement<UnitDuration> operator""_us(long double v) {
+    return Measurement<UnitDuration>{static_cast<double>(v), UnitDuration::microseconds};
 }
 
 inline Measurement<UnitDuration> operator""_min(unsigned long long v) {

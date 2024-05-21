@@ -11,22 +11,27 @@ namespace xiaohu_robot {
 inline namespace Nodes {
 class InitPositionNode final: public Runnable {
 public:
-    InitPositionNode(
-        std::string initPositionWithCoordinateTopic = CommonConfigs::initPositionWithCoordinateTopic,
-        std::string initPositionWithCoordinateCovarianceStampedTopic
-        = CommonConfigs::initPositionWithCoordinateCovarianceStampedTopic,
-        std::string clearCostmapsTopic = CommonConfigs::clearCostmapsTopic,
-        NodeBasicConfig const& nodeBasicConfig = NodeBasicConfig{}
-    );
+    struct Configs final {
+        std::string initPositionRequestTopic{CommonConfigs::initPositionRequestTopic};
+        std::string initPositionResultTopic{CommonConfigs::initPositionResultTopic};
+        std::string amclInitPositionRequestTopic{CommonConfigs::amclInitPositionRequestTopic};
+        std::string clearCostmapsTopic{CommonConfigs::clearCostmapsTopic};
+        NodeBasicConfigs nodeBasicConfigs{};
+    };
+
+    InitPositionNode(Configs);
+    ~InitPositionNode();
     void run() override;
 
 private:
     NodeHandle nodeHandle;
-    MessageSubscriber const initPositionWithCoordinateTopicMessageSubscriber;
-    MessagePublisher const initPositionWithCoordinateCovarianceStampedMessagePublisher;
+    Subscriber const initPositionRequestSubscriber;
+    Publisher const initPositionResultPublisher;
+    Publisher const amclInitPositionRequestTopicPublisher;
     ServiceClient clearCostmapsClient;
+    Configs configs;
 
-    void whenReceiveInitPositionCoordinateMessage(CoordinateMessagePointer);
+    void whenReceivedInitPositionRequest(CoordinateMessagePointer);
 };
 }  // namespace Nodes
 }  // namespace xiaohu_robot

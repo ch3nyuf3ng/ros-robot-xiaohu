@@ -1,10 +1,6 @@
 #include "xiaohu_robot/Nodes/JoystickVelocityControlNode.hpp"
 #include "ros/init.h"
-#include "xiaohu_robot/Foundation/NodeControl.hpp"
-#include "xiaohu_robot/Foundation/Typedefs.hpp"
-#include "xiaohu_robot/Foundation/VelocityCommand.hpp"
 #include <sstream>
-#include <unistd.h>
 #include <utility>
 
 int main(int argc, char* argv[]) {
@@ -27,7 +23,7 @@ JoystickVelocityControlNode::Config::Config(
     AngularSpeed maxAngularSpeed,
     std::string velocityCommandTopic,
     std::string joystickTopic,
-    NodeBasicConfig nodeBasicConfig
+    NodeBasicConfigs nodeBasicConfig
 ):
     nodeBasicConfig{std::move(nodeBasicConfig)},
     velocityCommandTopic{std::move(velocityCommandTopic)},
@@ -39,11 +35,11 @@ JoystickVelocityControlNode::Config::Config(
 
 std::string JoystickVelocityControlNode::Config::toString() const {
     std::ostringstream oss;
-    oss << "JoystickVelocityControl Config:\n"
-        << nodeBasicConfig.toString() << "velocityCommandTopic: " << velocityCommandTopic << "\n"
-        << "joystickTopic: " << joystickTopic << "\n"
-        << "maxLinearSpeed" << maxLinearSpeed << "\n"
-        << "maxAngularSpeed" << maxAngularSpeed << "\n";
+    oss << "JoystickVelocityControl Config:\n";
+    oss << "velocityCommandTopic: " << velocityCommandTopic << "\n";
+    oss << "joystickTopic: " << joystickTopic << "\n";
+    oss << "maxLinearSpeed" << maxLinearSpeed << "\n";
+    oss << "maxAngularSpeed" << maxAngularSpeed << "\n";
     return oss.str();
 }
 

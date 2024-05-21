@@ -4,9 +4,9 @@
 #define XIAOHU_ROBOT_FOUNDATION_NODE_CONTROL_HPP
 
 #include "xiaohu_robot/Foundation/CommonConfigs.hpp"
-#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <cstddef>
+#include <functional>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
@@ -15,29 +15,30 @@ struct Runnable {
     virtual void run() = 0;
 };
 
-struct NodeBasicConfig final: public Printable {
-    std::string nodeNamespace;
-    std::size_t messageBufferSize;
-    Frequency loopFrequency;
-
-    NodeBasicConfig(
-        std::string nodeNamespace = CommonConfigs::nodeNamespace,
-        std::size_t messageBufferSize = CommonConfigs::messageBufferSize,
-        Frequency loopFrequency = CommonConfigs::loopFrequency
-    );
-    std::string toString() const override;
+struct NodeBasicConfigs final {
+    std::string nodeNamespace{CommonConfigs::xiaohuRobotNamespace};
+    std::size_t messageBufferSize{CommonConfigs::messageBufferSize};
+    Frequency loopFrequency{CommonConfigs::loopFrequency()};
 };
 
 struct NodeTiming final {
-    NodeTiming(NodeBasicConfig const& nodeBasicConfig);
-    Duration getTiming() const;
-    void setTiming(Duration);
-    void incrementTiming();
-    void resetTiming();
+    NodeTiming(Frequency loopFrequency);
+    Duration const& getCurrentTiming() const;
+    void addTimedTask(Duration const& delay, std::function<void()> task, std::string description);
+    void setCurrentTiming(Duration);
+    void increment();
+    void reset();
 
 private:
-    Duration timing;
-    NodeBasicConfig const& nodeBasicConfig;
+    struct TimedTask final {
+        Duration executionTime;
+        std::function<void()> task;
+        std::string description;
+    };
+
+    Frequency const loopFrequency;
+    Duration currentTiming{0_s};
+    std::vector<TimedTask> timedTasks{};
 };
 }  // namespace Foundation
 }  // namespace xiaohu_robot

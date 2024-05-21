@@ -1,9 +1,8 @@
 #pragma once
 
-#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #ifndef XIAOHU_ROBOT_JOYSTICK_HPP
 #define XIAOHU_ROBOT_JOYSTICK_HPP
-
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #include "xiaohu_robot/Foundation/NodeControl.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
@@ -14,7 +13,7 @@ namespace xiaohu_robot {
 inline namespace Nodes {
 struct JoystickVelocityControlNode final: public Runnable {
     struct Config final: public Printable {
-        NodeBasicConfig nodeBasicConfig;
+        NodeBasicConfigs nodeBasicConfig;
         std::string velocityCommandTopic;
         std::string joystickTopic;
         LinearSpeed maxLinearSpeed;
@@ -23,9 +22,9 @@ struct JoystickVelocityControlNode final: public Runnable {
         Config(
             LinearSpeed maxLinearSpeed,
             AngularSpeed maxAngularSpeed,
-            std::string velocityCommandTopic = CommonConfigs::velocityCommandTopic,
-            std::string joystickTopic = CommonConfigs::joystickTopic,
-            NodeBasicConfig nodeBasicConfig = NodeBasicConfig{}
+            std::string velocityCommandTopic = CommonConfigs::velocityControlRequestTopic,
+            std::string joystickTopic = CommonConfigs::joystickResultTopic,
+            NodeBasicConfigs nodeBasicConfig = NodeBasicConfigs{}
         );
         std::string toString() const override;
     };
@@ -36,8 +35,8 @@ struct JoystickVelocityControlNode final: public Runnable {
 private:
     Config const config;
     NodeHandle nodeHandle;
-    MessagePublisher const velocityCommandMessagePublisher;
-    MessageSubscriber const joystickMessageSubscriber;
+    Publisher const velocityCommandMessagePublisher;
+    Subscriber const joystickMessageSubscriber;
 
     void sendVelocityCommand(VelocityCommand);
     void whenReceivedJoystickMessage(JoystickMessagePointer);
