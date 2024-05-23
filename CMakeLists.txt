@@ -60,12 +60,17 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  GeneralTaskMessage.msg
-  InspectionTaskMessage.msg
-  MappingTaskMessage.msg
-  MedicineDeliveryTaskMessage.msg
-  NodeControlMessage.msg
-  StatusAndDescriptionMessage.msg
+    InspectionTaskRequest.msg
+    InspectionTaskResult.msg
+    LegacyGeneralTaskRequest.msg
+    LegacyGeneralTaskResult.msg
+    MappingTaskRequest.msg
+    MappingTaskResult.msg
+    MedicineDeliveryTaskRequest.msg
+    MedicineDeliveryTaskResult.msg
+    StatusAndDescription.msg
+    TaskStateControlRequest.msg
+    TaskStateControlResult.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -154,7 +159,8 @@ add_library(${PROJECT_NAME}_foundation
   src/${PROJECT_NAME}/Foundation/Audio.cpp
   src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
   src/${PROJECT_NAME}/Foundation/Coordinate.cpp
-  src/${PROJECT_NAME}/Foundation/File.cpp
+  src/${PROJECT_NAME}/Foundation/Filesystem.cpp
+  src/${PROJECT_NAME}/Foundation/InfraredTemperatureSensor.cpp
   src/${PROJECT_NAME}/Foundation/Measurement.cpp
   src/${PROJECT_NAME}/Foundation/ManipulatorControl.cpp
   src/${PROJECT_NAME}/Foundation/NodeControl.cpp
@@ -250,6 +256,26 @@ target_link_libraries(${PROJECT_NAME}_asr_node
 set_target_properties(${PROJECT_NAME}_asr_node
   PROPERTIES
     OUTPUT_NAME asr_node
+    PREFIX ""
+)
+
+add_executable(${PROJECT_NAME}_temperature_measurement_node
+  src/${PROJECT_NAME}/Nodes/TemperatureMeasurementNode.cpp
+)
+
+add_dependencies(${PROJECT_NAME}_temperature_measurement_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(${PROJECT_NAME}_temperature_measurement_node
+  ${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
+)
+
+set_target_properties(${PROJECT_NAME}_temperature_measurement_node
+  PROPERTIES
+    OUTPUT_NAME temperature_measurement_node
     PREFIX ""
 )
 

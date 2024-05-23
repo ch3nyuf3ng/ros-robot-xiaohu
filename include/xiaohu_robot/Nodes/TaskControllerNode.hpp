@@ -1,11 +1,14 @@
 #pragma once
 
+#include <boost/any.hpp>
+#include <memory>
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
 
 #include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
+#include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/Foundation/NodeControl.hpp"
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
@@ -18,10 +21,16 @@ class TaskControllerNode final: public Runnable {
 public:
     struct Configs final {
         std::string baseStationName{CommonConfigs::baseStationName};
+        std::string currentTaskStateRequestTopic{CommonConfigs::currentTaskStateRequestTopic};
+        std::string currentTaskStateResultTopic{CommonConfigs::currentTaskStateResultTopic};
         std::string legacyGeneralTasksRequestTopic{CommonConfigs::legacyGeneralTasksRequestTopic};
+        std::string legacyGeneralTasksResultTopic{CommonConfigs::legacyGeneralTasksResultTopic};
         std::string mappingTaskRequestTopic{CommonConfigs::mappingTaskRequestTopic};
+        std::string mappingTaskResultTopic{CommonConfigs::mappingTaskResultTopic};
         std::string inspectionTaskRequestTopic{CommonConfigs::inspectionTaskRequestTopic};
+        std::string inspectionTaskResultTopic{CommonConfigs::inspectionTaskResultTopic};
         std::string medicineDeliveryTaskRequestTopic{CommonConfigs::medicineDeliveryTaskRequestTopic};
+        std::string medicineDeliveryTaskResultTopic{CommonConfigs::medicineDeliveryTaskResultTopic};
         std::string initPositionRequestTopic{CommonConfigs::initPositionRequestTopic};
         std::string initPositionResultTopic{CommonConfigs::initPositionResultTopic};
         std::string coordinateNavigationTopic{CommonConfigs::coordinateNavigationTopic};
@@ -38,6 +47,8 @@ public:
         std::string speechRecognitionRequestTopic{CommonConfigs::speechRecognitionRequestTopic};
         std::string speechRecognitionResultTopic{CommonConfigs::speechRecognitionResultTopic};
         std::string voiceRecognitionRequestTopic{CommonConfigs::speechRecognitionRequestTopic};
+        std::string temperatureMeasurementRequestTopic{CommonConfigs::temperatureMeasurementRequestTopic};
+        std::string temperatureMeasurementResultTopic{CommonConfigs::temperatureMeasurementResultTopic};
         NodeBasicConfigs nodeBasicConfig{};
     };
 
@@ -53,8 +64,8 @@ private:
         DetectingMedicine,
         GraspingMedicine,
         GoingToPatient,
+        AskingMeasuringTemperature,
         MeasuringTemperature,
-        HasMeasuredTemperature,
         AskingIfVideoNeeded,
         ConfirmPatientRequest,
         VideoCommunicating,
@@ -77,9 +88,16 @@ private:
     };
 
     struct TaskStateContext final {
+        std::unique_ptr<TaskResult> taskResultPointer{nullptr};
         TaskState currentTaskState{TaskState::CalibratingInitialPosition};
         TaskState previousTaskState{TaskState::CalibratingInitialPosition};
         bool stateTransferring{false};
+
+        TaskResult& taskResult();
+        MappingTask::Result& mappingTaskResult();
+        InspectionTask::Result& inspectionTaskResult();
+        MedicineDeliveryTask::Result& medicineDeliveryTaskResult();
+        LegacyGeneralTask::Result& legacyGeneralTaskResult();
     };
 
     struct DelegationState {
@@ -108,6 +126,12 @@ private:
         void reset() override;
     };
 
+    struct TemperatureMeasurementContext final: public DelegationState {
+        Temperature temperature{0, UnitTemperature::celcius};
+
+        void reset() override;
+    };
+
     struct UnsupportedTaskException final: public std::runtime_error {
         UnsupportedTaskException():
             std::runtime_error("未支持的任务类型") {}
@@ -122,13 +146,17 @@ private:
     Subscriber const initPositionResultSubscriber;
 
     TaskStateContext taskState;
-    std::deque<bool> currentTaskLegacy;
-    std::deque<LegacyGeneralTask> legacyGeneralTasks;
+    std::deque<std::unique_ptr<Task>> tasks;
+    Subscriber const currentTaskStateRequestSubscriber;
+    Publisher const currentTaskStateResultPublisher;
     Subscriber const legacyGeneralTaskRequestSubscriber;
-    std::deque<std::unique_ptr<SpecificTask>> tasks;
+    Publisher const legacyGeneralTaskResultPublisher;
     Subscriber const inspectionTaskRequestSubscriber;
+    Publisher const inspectionTaskResultPublisher;
     Subscriber const mappingTaskRequestSubscriber;
+    Publisher const mappingTaskResultPublisher;
     Subscriber const medicineDeliveryRequestSubsriber;
+    Publisher const medicineDeliveryTaskResultPublisher;
 
     DelegationState velocityControl;
     Publisher const velocityControlRequestPublisher;
@@ -150,6 +178,7 @@ private:
     Subscriber const textToSpeechResultSubscriber;
 
     SpeechRecognitionContext speechReognition;
+    SpeechRecognitionContext confirmSpeechRecognition;
     Publisher const speechRecognitionRequestPublisher;
     Subscriber const speechRecognitionResultSubscriber;
     int speechRecognitionContinuousFailureTimes;
@@ -161,21 +190,22 @@ private:
     MedicineDetectionAndGraspContext medicineGrasp;
     Publisher const medicineGraspRequestPublisher;
     Subscriber const medicineGraspResultSubscriber;
-    
-    SoundplayClient soundPlayClient;
+
+    TemperatureMeasurementContext temperatureMeasurement;
+    Publisher const temperatureMeasurementRequestPublisher;
+    Subscriber const temperatureMeasurementResultSubscriber;
 
     DelegationState waiting;
     DelegationState exceptionHandling;
-    DelegationState temperatureMeasurement;
 
     Configs configs;
 
+    Task& getCurrentTask() const;
     bool isCurrentTaskLegacy() const;
-    SpecificTask& getCurrentTask();
-    LegacyGeneralTask& getCurrentLegacyTask();
-    MappingTask& getCurrentMappingTask();
-    InspectionTask& getCurrentInspectionTask();
-    MedicineDeliveryTask& getCurrentMedicineDeliveryTask();
+    LegacyGeneralTask& getCurrentLegacyTask() const;
+    MappingTask& getCurrentMappingTask() const;
+    InspectionTask& getCurrentInspectionTask() const;
+    MedicineDeliveryTask& getCurrentMedicineDeliveryTask() const;
     TaskState getCurrentTaskState() const;
     TaskState getPreviousTaskState() const;
     void transferCurrentTaskStateTo(TaskState nextState);
@@ -194,8 +224,8 @@ private:
     void haveFinishedPreviousTask();
     void goToBaseStation();
     void waypointUnreachable();
-    void measuringTemperature();
-    void hasMeasuredTemperature();
+    void askMeasuringTemperature();
+    void measureTemperature();
     void askIfVideoNeeded();
     void confirmPatientRequest();
     void videoCommunicating();
@@ -209,18 +239,19 @@ private:
     void showTiming() const;
     void displayInitializationResult() const;
 
-    void whenReceivedInitPositionRequest(CoordinateMessagePointer);
-    void whenReceivedInitPositionResult(StatusAndDescriptionMessagePointer);
-    void whenReceivedMappingTaskRequest(MappingTaskMessagePointer);
-    void whenReceivedInspectionTaskRequest(InspectionTaskMessagePointer);
-    void whenReceivedMedicineDeliveryTaskRequest(MedicineDeliveryTaskMessagePointer);
-    void whenReceivedMedicineDetectionResult(ObjectDetectionResultMessasgePointer);
-    void whenReceivedNavigationResult(StringMessagePointer);
-    void whenReceivedMedicineGraspResult(StringMessagePointer);
-    void whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer);
-    void whenReceivedStateControlCommand(StringMessagePointer);
-    void whenReceivedTextToSpeechResult(StatusAndDescriptionMessagePointer);
-    void whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessagePointer);
+    void whenReceivedCurrentTaskStateRequest(EmptyMessage::ConstPtr const&);
+    void whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const&);
+    void whenReceivedInitPositionResult(StatusAndDescriptionMessage::ConstPtr const&);
+    void whenReceivedMappingTaskRequest(MappingTaskRequestMessage::ConstPtr const&);
+    void whenReceivedInspectionTaskRequest(InspectionTaskRequestMessage::ConstPtr const&);
+    void whenReceivedMedicineDeliveryTaskRequest(MedicineDeliveryTaskRequestMessage::ConstPtr const&);
+    void whenReceivedMedicineDetectionResult(ObjectDetectionResultMessasge::ConstPtr const&);
+    void whenReceivedNavigationResult(StringMessage::ConstPtr const&);
+    void whenReceivedMedicineGraspResult(StringMessage::ConstPtr const&);
+    void whenReceivedLegacyGeneralTaskRequest(LegacyGeneralTaskRequestMessage::ConstPtr const&);
+    void whenReceivedTextToSpeechResult(StatusAndDescriptionMessage::ConstPtr const&);
+    void whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessage::ConstPtr const&);
+    void whenReceivedTemperatureMeasurementResult(Float64Message::ConstPtr const&);
 
     void delegateVelocityControl(LinearSpeed forward);
     void delegateObjectDetectionControl(ObjectDetectionControl target);
@@ -229,8 +260,9 @@ private:
     void delegateObjectGrasping(Coordinate coordinate);
     void delegateTextToSpeech(std::string content);
     void delegateSpeechRecognition(Duration duration);
+    void delegateTemperatureMeasurement();
 
-    static void displayDetectedObjects(ObjectDetectionResultMessasgePointer coordinates_ptr);
+    static void displayDetectedObjects(ObjectDetectionResultMessasge::ConstPtr const& coordinates_ptr);
     static StringMessage createWaypointMessage(std::string name);
     static StringMessage createObjectDetectionControlMessage(ObjectDetectionControl behavior);
     static std::string toString(ObjectDetectionControl behavior);

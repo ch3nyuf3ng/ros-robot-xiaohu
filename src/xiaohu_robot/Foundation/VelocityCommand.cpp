@@ -1,5 +1,6 @@
 #include "xiaohu_robot/Foundation/VelocityCommand.hpp"
 #include "xiaohu_robot/Foundation/Joystick.hpp"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <sstream>
 
 namespace xiaohu_robot {
@@ -10,7 +11,7 @@ VelocityCommand::VelocityCommand(LinearSpeed forwardBackwardAxis, LinearSpeed le
     rotationAxis{std::move(rotationAxis)} {}
 
 VelocityCommand::VelocityCommand(
-    JoystickMessagePointer message, LinearSpeed maxLinearSpeed, AngularSpeed maxAngularSpeed
+    JoystickMessage::ConstPtr const& message, LinearSpeed maxLinearSpeed, AngularSpeed maxAngularSpeed
 ):
     forwardBackwardAxis{maxLinearSpeed * message->axes[leftStickUpDownAxis]},
     leftRightAxis{maxLinearSpeed * message->axes[leftStickLeftRightAxis]},

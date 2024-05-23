@@ -15,41 +15,48 @@
 #include "ros/subscriber.h"
 #include "sensor_msgs/JointState.h"
 #include "sensor_msgs/Joy.h"
+#include "std_msgs/Empty.h"
 #include "std_msgs/Float64.h"
 #include "std_msgs/String.h"
 #include "std_srvs/Empty.h"
 #include "wpb_home_behaviors/Coord.h"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
-#include "xiaohu_robot/GeneralTaskMessage.h"
-#include "xiaohu_robot/InspectionTaskMessage.h"
-#include "xiaohu_robot/MappingTaskMessage.h"
-#include "xiaohu_robot/MedicineDeliveryTaskMessage.h"
-#include "xiaohu_robot/NodeControlMessage.h"
-#include "xiaohu_robot/StatusAndDescriptionMessage.h"
+#include "xiaohu_robot/InspectionTaskRequest.h"
+#include "xiaohu_robot/InspectionTaskResult.h"
+#include "xiaohu_robot/LegacyGeneralTaskRequest.h"
+#include "xiaohu_robot/LegacyGeneralTaskResult.h"
+#include "xiaohu_robot/MappingTaskRequest.h"
+#include "xiaohu_robot/MappingTaskResult.h"
+#include "xiaohu_robot/MedicineDeliveryTaskRequest.h"
+#include "xiaohu_robot/MedicineDeliveryTaskResult.h"
+#include "xiaohu_robot/StatusAndDescription.h"
+#include "xiaohu_robot/TaskStateControlRequest.h"
+#include "xiaohu_robot/TaskStateControlResult.h"
 #include <sound_play/sound_play.h>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
 inline namespace Typedefs {
+using EmptyMessage = std_msgs::Empty;
 using StringMessage = std_msgs::String;
 using Float64Message = std_msgs::Float64;
 using VelocityCommandMessage = geometry_msgs::Twist;
 using CoordinateMessage = geometry_msgs::Pose;
 using CoordinateCovarianceStampedMessage = geometry_msgs::PoseWithCovarianceStamped;
+using JoystickMessage = sensor_msgs::Joy;
 using ManipulatorControlMessage = sensor_msgs::JointState;
 using ObjectDetectionResultMessasge = wpb_home_behaviors::Coord;
-
-using StringMessagePointer = StringMessage::ConstPtr const&;
-using Float64MessagePointer = Float64Message::ConstPtr const&;
-using NodeControlMessagePointer = NodeControlMessage::ConstPtr const&;
-using ObjectDetectionResultMessasgePointer = ObjectDetectionResultMessasge::ConstPtr const&;
-using JoystickMessagePointer = sensor_msgs::Joy::ConstPtr const&;
-using CoordinateMessagePointer = CoordinateMessage::ConstPtr const&;
-using InspectionTaskMessagePointer = InspectionTaskMessage::ConstPtr const&;
-using MappingTaskMessagePointer = MappingTaskMessage::ConstPtr const&;
-using MedicineDeliveryTaskMessagePointer = MedicineDeliveryTaskMessage::ConstPtr const&;
-using GeneralTaskMessagePointer = GeneralTaskMessage::ConstPtr const&;
-using StatusAndDescriptionMessagePointer = StatusAndDescriptionMessage::ConstPtr const&;
+using TaskStateControlRequestMessage = TaskStateControlRequest;
+using InspectionTaskRequestMessage = InspectionTaskRequest;
+using MappingTaskRequestMessage = MappingTaskRequest;
+using MedicineDeliveryTaskRequestMessage = MedicineDeliveryTaskRequest;
+using LegacyGeneralTaskRequestMessage = LegacyGeneralTaskRequest;
+using TaskStateControlResultMessage = TaskStateControlResult;
+using InspectionTaskResultMessage = InspectionTaskResult;
+using MappingTaskResultMessage = MappingTaskResult;
+using MedicineDeliveryTaskResultMessage = MedicineDeliveryTaskResult;
+using LegacyGeneralTaskResultMessage = LegacyGeneralTaskResult;
+using StatusAndDescriptionMessage = StatusAndDescription;
 
 using NodeHandle = ros::NodeHandle;
 using Publisher = ros::Publisher;
@@ -61,6 +68,7 @@ using Duration = Measurement<UnitDuration>;
 using Frequency = Measurement<UnitFrequency>;
 using LinearSpeed = Measurement<UnitSpeed>;
 using AngularSpeed = Measurement<UnitAngularSpeed>;
+using Temperature = Measurement<UnitTemperature>;
 
 using NavigationClient = actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>;
 using SoundplayClient = sound_play::SoundClient;

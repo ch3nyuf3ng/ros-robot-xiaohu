@@ -1,6 +1,5 @@
 string type
-string mapName
-string savePath
+string taskId
 string pharmacy
 string patient
 string prescription

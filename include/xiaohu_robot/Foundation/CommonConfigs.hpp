@@ -11,12 +11,22 @@ inline namespace Foundation {
 struct CommonConfigs final {
     static std::string const baseStationName;
     static std::string const xiaohuRobotNamespace;
+    static std::string const currentTaskStateRequestTopic;
+    static std::string const currentTaskStateResultTopic;
     static std::string const medicineDeliveryTaskRequestTopic;
+    static std::string const medicineDeliveryTaskResultTopic;
     static std::string const legacyGeneralTasksRequestTopic;
+    static std::string const legacyGeneralTasksResultTopic;
     static std::string const inspectionTaskRequestTopic;
+    static std::string const inspectionTaskResultTopic;
     static std::string const mappingTaskRequestTopic;
+    static std::string const mappingTaskResultTopic;
     static std::string const initPositionRequestTopic;
     static std::string const initPositionResultTopic;
+    static std::string const videoCallingRequestTopic;
+    static std::string const videoCallingResultTopic;
+    static std::string const continueProcedureRequestTopic;
+    static std::string const continueProcedureResultTopic;
     static std::string const joystickResultTopic;
     static std::string const amclInitPositionRequestTopic;
     static std::string const coordinateNavigationTopic;
@@ -33,6 +43,8 @@ struct CommonConfigs final {
     static std::string const textToSpeechResultTopic;
     static std::string const speechRecognitionRequestTopic;
     static std::string const speechRecognitionResultTopic;
+    static std::string const temperatureMeasurementRequestTopic;
+    static std::string const temperatureMeasurementResultTopic;
     static std::string const xfyunApiLoginParams;
     static std::size_t const messageBufferSize;
     static std::string const& packagePath();

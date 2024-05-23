@@ -22,7 +22,7 @@ struct Coordinate final: public Printable, public MessageConvertible<CoordinateM
         orientationZ{},
         orientationW{} {};
 
-    Coordinate(CoordinateMessagePointer message):
+    Coordinate(CoordinateMessage::ConstPtr const& message):
         Coordinate(*message) {}
 
     Coordinate(CoordinateMessage message):

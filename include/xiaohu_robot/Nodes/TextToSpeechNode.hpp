@@ -47,7 +47,7 @@ private:
     std::string sessionId{};
 
     void logout();
-    void whenReceivedTextToSpeechRequest(StringMessagePointer request);
+    void whenReceivedTextToSpeechRequest(StringMessage::ConstPtr const& request);
     void onlineTextToSpeech(std::string text);
 };
 }  // namespace Nodes

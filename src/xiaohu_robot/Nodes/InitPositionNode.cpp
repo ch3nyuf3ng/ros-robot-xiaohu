@@ -2,7 +2,7 @@
 #include "ros/console.h"
 #include "ros/init.h"
 #include "ros/time.h"
-#include "xiaohu_robot/StatusAndDescriptionMessage.h"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <chrono>
 #include <clocale>
 #include <thread>
@@ -47,7 +47,7 @@ void InitPositionNode::run() {
     ros::spin();
 }
 
-void InitPositionNode::whenReceivedInitPositionRequest(CoordinateMessagePointer receivedMessage) {
+void InitPositionNode::whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const& receivedMessage) {
     CoordinateCovarianceStampedMessage amclInitPositionRequest;
     amclInitPositionRequest.header.frame_id = "map";
     amclInitPositionRequest.header.stamp = ros::Time::now();

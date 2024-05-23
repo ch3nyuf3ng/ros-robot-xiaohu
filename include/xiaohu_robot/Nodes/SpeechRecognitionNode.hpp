@@ -62,7 +62,7 @@ private:
     void logout();
     void endSession();
     void uploadGrammar();
-    void whenReceivedSpeechRecognitionRequest(StringMessagePointer request);
+    void whenReceivedSpeechRecognitionRequest(StringMessage::ConstPtr const& request);
     std::string speechRecognitionFromMicrophone(std::chrono::seconds duration);
     Recorder::DataCallback whenPeriodDataIsReady(RecorderContext& context);
     Recorder::EndCallback whenRecorderStopped(RecorderContext& context);

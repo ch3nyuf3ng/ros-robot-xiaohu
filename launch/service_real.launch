@@ -1,4 +1,7 @@
 <launch>
+    <group ns="xiaohu_robot">
+        <param name="real_temperature" value="true"/>
+    </group>
     <include file="$(find xiaohu_robot)/maps/load_map.launch">
         <arg name="map_info" value="$(find xiaohu_robot)/maps/real/map.yaml" />
     </include>

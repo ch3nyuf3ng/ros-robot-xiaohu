@@ -1,0 +1,4 @@
+string finishCurrentState=fcs
+
+string currentState
+string controlOption

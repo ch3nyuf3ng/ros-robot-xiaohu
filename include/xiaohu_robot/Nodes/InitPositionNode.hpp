@@ -31,7 +31,7 @@ private:
     ServiceClient clearCostmapsClient;
     Configs configs;
 
-    void whenReceivedInitPositionRequest(CoordinateMessagePointer);
+    void whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const&);
 };
 }  // namespace Nodes
 }  // namespace xiaohu_robot

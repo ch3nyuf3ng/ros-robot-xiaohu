@@ -134,3 +134,10 @@ shared_ptr<UnitFrequency const> const UnitFrequency::kilohertz{UnitFrequency::ma
 UnitFrequency const* UnitFrequency::getBaseUnit() const {
     return hertz.get();
 }
+
+shared_ptr<UnitTemperature const> const UnitTemperature::celcius{UnitTemperature::makeConst("℃", 1)};
+shared_ptr<UnitTemperature const> const UnitTemperature::kelvin{UnitTemperature::makeConst("K", 1, -273.15)};
+
+UnitTemperature const* UnitTemperature::getBaseUnit() const {
+    return celcius.get();
+}

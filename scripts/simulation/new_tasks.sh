@@ -1,7 +1,17 @@
 rostopic pub -1 /xiaohu_robot/init_position_request geometry_msgs/Pose \
 '{position: {x: -0.0270498, y: -3.37887, z: 0}, orientation: {x: 0, y: 0, z: 0.706908, w: 0.707306}}'
 
-rostopic pub -1 /xiaohu_robot/medicine_delivery_task_request xiaohu_robot/MedicineDeliveryTaskMessage "{\
+rostopic pub -1 /xiaohu_robot/inspection_task_request \
+xiaohu_robot/InspectionTaskRequest "{\
+    taskId: '2', \
+    patientName: '王明', \
+    patientPosition: {\
+        position: {x: 3.78687, y: 1.73546, z: 0.0}, \
+        orientation: {x: 0.0, y: 0.0, z: 0.999999, w: -0.00112452}\
+    }\
+}"
+
+rostopic pub -1 /xiaohu_robot/medicine_delivery_task_request xiaohu_robot/MedicineDeliveryTaskRequest "{\
     taskId: '1', \
     prescription: '感冒灵颗粒：一天三次，一次一包，开水冲服', \
     pharmacyName: '药房', \
@@ -15,13 +25,3 @@ rostopic pub -1 /xiaohu_robot/medicine_delivery_task_request xiaohu_robot/Medici
         orientation: {x: 0.0, y: 0.0, z: 0.00435664, w: 0.999991}\
     }\
 }" 
-
-rostopic pub -1 /xiaohu_robot/inspection_task_request \
-xiaohu_robot/InspectionTaskMessage "{\
-    taskId: '2', \
-    patientName: '王明', \
-    patientPosition: {\
-        position: {x: 3.78687, y: 1.73546, z: 0.0}, \
-        orientation: {x: 0.0, y: 0.0, z: 0.999999, w: -0.00112452}\
-    }\
-}"

@@ -49,6 +49,7 @@ SpeechRecognitionNode::SpeechRecognitionNode(SpeechRecognitionNode::Configs conf
         uploadGrammar();
         std::ostringstream oss;
         oss << "engine_type = local, ";
+        oss << "asr_threshold = 50, ";
         oss << "asr_res_path = fo|" << configs.asrParams.asrResourcePath << ", ";
         oss << "grm_build_path = " << configs.asrParams.asrGrammarBuildPath << ", ";
         oss << "local_grammar = " << grammarHandle.grammarId << ", ";
@@ -133,7 +134,7 @@ int SpeechRecognitionNode::whenGrammarHasBuilt(int errorCode, char const* gramma
     return 0;
 }
 
-void SpeechRecognitionNode::whenReceivedSpeechRecognitionRequest(StringMessagePointer request) {
+void SpeechRecognitionNode::whenReceivedSpeechRecognitionRequest(StringMessage::ConstPtr const& request) {
     if (isThreadEnded) {
         processThread.join();
         isThreadEnded = false;

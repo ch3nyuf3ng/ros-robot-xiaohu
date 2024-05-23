@@ -7,12 +7,22 @@ namespace xiaohu_robot {
 inline namespace Foundation {
 std::string const CommonConfigs::baseStationName{"base"};
 std::string const CommonConfigs::xiaohuRobotNamespace{"xiaohu_robot"};
+std::string const CommonConfigs::currentTaskStateRequestTopic{"current_task_state_request"};
+std::string const CommonConfigs::currentTaskStateResultTopic{"current_task_state_result"};
 std::string const CommonConfigs::legacyGeneralTasksRequestTopic{"legacy_tasks_request"};
+std::string const CommonConfigs::legacyGeneralTasksResultTopic{"legacy_tasks_result"};
 std::string const CommonConfigs::inspectionTaskRequestTopic{"inspection_task_request"};
+std::string const CommonConfigs::inspectionTaskResultTopic{"inspection_task_result"};
 std::string const CommonConfigs::mappingTaskRequestTopic{"mapping_task_request"};
+std::string const CommonConfigs::mappingTaskResultTopic{"mapping_task_result"};
 std::string const CommonConfigs::medicineDeliveryTaskRequestTopic{"medicine_delivery_task_request"};
+std::string const CommonConfigs::medicineDeliveryTaskResultTopic{"medicine_delivery_task_result"};
 std::string const CommonConfigs::initPositionRequestTopic{"init_position_request"};
 std::string const CommonConfigs::initPositionResultTopic{"init_position_result"};
+std::string const CommonConfigs::videoCallingRequestTopic{"video_call_request"};
+std::string const CommonConfigs::videoCallingResultTopic{"viedo_call_result"};
+std::string const CommonConfigs::continueProcedureRequestTopic{"continue_request"};
+std::string const CommonConfigs::continueProcedureResultTopic{"continue_result"};
 std::string const CommonConfigs::joystickResultTopic{"/joy"};
 std::string const CommonConfigs::amclInitPositionRequestTopic{"/initialpose"};
 std::string const CommonConfigs::coordinateNavigationTopic{"/move_base"};
@@ -29,9 +39,9 @@ std::string const CommonConfigs::textToSpeechRequestTopic{"text_to_speech_reques
 std::string const CommonConfigs::textToSpeechResultTopic{"text_to_speech_result"};
 std::string const CommonConfigs::speechRecognitionRequestTopic{"speech_recognition_request"};
 std::string const CommonConfigs::speechRecognitionResultTopic{"speech_recognition_result"};
-
+std::string const CommonConfigs::temperatureMeasurementRequestTopic{"temperature_measurement_request"};
+std::string const CommonConfigs::temperatureMeasurementResultTopic{"temperature_measurement_result"};
 std::string const CommonConfigs::xfyunApiLoginParams{"appid = f897d917"};
-
 std::size_t const CommonConfigs::messageBufferSize{10};
 
 std::string const& CommonConfigs::packagePath() {

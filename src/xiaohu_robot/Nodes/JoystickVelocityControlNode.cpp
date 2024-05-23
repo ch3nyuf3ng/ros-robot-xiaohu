@@ -71,7 +71,7 @@ void JoystickVelocityControlNode::sendVelocityCommand(VelocityCommand command) {
     ROS_INFO("Velocity command sent: %s", command.toString().c_str());
 }
 
-void JoystickVelocityControlNode::whenReceivedJoystickMessage(JoystickMessagePointer message) {
+void JoystickVelocityControlNode::whenReceivedJoystickMessage(sensor_msgs::Joy::ConstPtr const& message) {
     sendVelocityCommand({message, config.maxLinearSpeed, config.maxAngularSpeed});
 }
 }  // namespace Nodes

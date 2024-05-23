@@ -5,44 +5,113 @@
 
 #include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
+#include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
+#include <sstream>
 #include <string>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
+enum struct TaskVersion {
+    Legacy,
+    New
+};
+
 enum struct TaskType {
     Mapping,
     Inspection,
     MedicineDelivery
 };
 
+enum struct TaskStatus {
+    Cancelled,
+    Done,
+    Failed
+};
+
 std::string toString(TaskType);
 TaskType toType(std::string);
 
-struct SpecificTask: public Printable {
-    ~SpecificTask() = default;
+struct Task: public Printable {
+    ~Task() = default;
     virtual TaskType getTaskType() const = 0;
+    virtual TaskVersion getTaskVersion() const = 0;
 };
 
-struct MappingTask final: public SpecificTask {
+struct TaskResult {
+    TaskStatus taskStatus;
+    std::stringstream logger;
+    virtual ~TaskResult() = default;
+};
+
+template<typename OriginalTaskType, typename TaskResultMessageType>
+struct TaskResultImplementation: public MessageConvertible<TaskResultMessageType>, public TaskResult {
+    OriginalTaskType const& task;
+
+    TaskResultImplementation(OriginalTaskType const& task):
+        task{task} {}
+
+    virtual ~TaskResultImplementation() = default;
+    virtual TaskResultMessageType toMessage() const override {
+        TaskResultMessageType result;
+        result.taskRequest = task.toMessage();
+        result.statusAndDescription = {};
+        switch (taskStatus) {
+        case TaskStatus::Cancelled:
+            result.statusAndDescription.status = StatusAndDescriptionMessage::cancelled;
+            break;
+        case TaskStatus::Done:
+            result.statusAndDescription.status = StatusAndDescriptionMessage::done;
+            break;
+        case TaskStatus::Failed:
+            result.statusAndDescription.status = StatusAndDescriptionMessage::failed;
+            break;
+        }
+        result.statusAndDescription.description = logger.str();
+        return result;
+    }
+};
+
+struct MappingTask final: public Task, public MessageConvertible<MappingTaskRequestMessage> {
+    MappingTaskRequestMessage requestMessage;
     std::string taskId;
 
-    MappingTask(MappingTaskMessagePointer message);
+    MappingTask(MappingTaskRequestMessage::ConstPtr const& message);
     std::string toString() const override;
     TaskType getTaskType() const override;
+    TaskVersion getTaskVersion() const override;
+    MappingTaskRequestMessage toMessage() const override;
+
+    struct Result final: TaskResultImplementation<MappingTask, MappingTaskResultMessage> {
+        using TaskResultImplementation::TaskResultImplementation;
+        using TaskResultImplementation::toMessage;
+    };
 };
 
-struct InspectionTask final: public SpecificTask {
+struct InspectionTask final: public Task, public MessageConvertible<InspectionTaskRequestMessage> {
+    InspectionTaskRequestMessage requestMessage;
     std::string taskId;
     std::string patientName;
     Coordinate patientPosition;
 
-    InspectionTask(InspectionTaskMessagePointer message);
+    InspectionTask(InspectionTaskRequestMessage::ConstPtr const& message);
     std::string toString() const override;
     TaskType getTaskType() const override;
+    TaskVersion getTaskVersion() const override;
+    InspectionTaskRequestMessage toMessage() const override;
+
+    struct Result final: public TaskResultImplementation<InspectionTask, InspectionTaskResultMessage> {
+        bool calledDoctor{false};
+        bool measuredTemperature{false};
+        Temperature patientTemperature{Temperature(0, UnitTemperature::celcius)};
+
+        using TaskResultImplementation::TaskResultImplementation;
+        InspectionTaskResultMessage toMessage() const override;
+    };
 };
 
-struct MedicineDeliveryTask final: public SpecificTask {
+struct MedicineDeliveryTask final: public Task, public MessageConvertible<MedicineDeliveryTaskRequestMessage> {
+    MedicineDeliveryTaskRequestMessage const& requestMessage;
     std::string taskId;
     std::string prescription;
     std::string pharmacyName;
@@ -50,34 +119,40 @@ struct MedicineDeliveryTask final: public SpecificTask {
     std::string patientName;
     Coordinate patientPosition;
 
-    MedicineDeliveryTask(MedicineDeliveryTaskMessagePointer message);
+    MedicineDeliveryTask(MedicineDeliveryTaskRequestMessage::ConstPtr const& message);
     std::string toString() const override;
     TaskType getTaskType() const override;
+    TaskVersion getTaskVersion() const override;
+    MedicineDeliveryTaskRequestMessage toMessage() const override;
+
+    struct Result final: public TaskResultImplementation<MedicineDeliveryTask, MedicineDeliveryTaskResultMessage> {
+        bool fetchedMedicine{false};
+        bool deliveredMedicine{false};
+
+        using TaskResultImplementation::TaskResultImplementation;
+        MedicineDeliveryTaskResultMessage toMessage() const override;
+    };
 };
 
-struct LegacyGeneralTask final: public Printable {
+struct LegacyGeneralTask final: public Task, public MessageConvertible<LegacyGeneralTaskRequestMessage> {
+    LegacyGeneralTaskRequestMessage requestMessage;
     TaskType type;
-    std::string mapName;
-    std::string savePath;
+    std::string taskId;
     std::string pharmacy;
     std::string patient;
     std::string prescription;
-    Coordinate medicinePosition;
 
-    LegacyGeneralTask(
-        TaskType type,
-        std::string mapName,
-        std::string savePath,
-        std::string pharmacy,
-        std::string patient,
-        std::string prescription,
-        Coordinate medicinePosition
-    );
-
-    LegacyGeneralTask(GeneralTaskMessagePointer);
+    LegacyGeneralTask(LegacyGeneralTaskRequestMessage::ConstPtr const&);
 
     std::string toString() const override;
-    TaskType getTaskType() const;
+    TaskType getTaskType() const override;
+    TaskVersion getTaskVersion() const override;
+    LegacyGeneralTaskRequestMessage toMessage() const override;
+
+    struct Result final: TaskResultImplementation<LegacyGeneralTask, LegacyGeneralTaskResultMessage> {
+        using TaskResultImplementation::TaskResultImplementation;
+        using TaskResultImplementation::toMessage;
+    };
 };
 }  // namespace Foundation
 }  // namespace xiaohu_robot

@@ -1,0 +1,2 @@
+xiaohu_robot/MappingTaskRequest taskRequest
+xiaohu_robot/StatusAndDescription statusAndDescription

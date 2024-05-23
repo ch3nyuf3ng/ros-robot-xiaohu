@@ -14,7 +14,7 @@ struct VelocityCommand final: public Printable, public MessageConvertible<Veloci
     AngularSpeed rotationAxis;
 
     VelocityCommand(LinearSpeed x, LinearSpeed y, AngularSpeed z);
-    VelocityCommand(JoystickMessagePointer message, LinearSpeed maxLinearSpeed, AngularSpeed maxAngularSpeed);
+    VelocityCommand(JoystickMessage::ConstPtr const& message, LinearSpeed maxLinearSpeed, AngularSpeed maxAngularSpeed);
     VelocityCommandMessage toMessage() const override;
     std::string toString() const override;
 };

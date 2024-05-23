@@ -5,7 +5,7 @@
 #include "xfyun_mod/msp_errors.h"
 #include "xfyun_mod/qtts.h"
 #include "xiaohu_robot/Foundation/Audio.hpp"
-#include "xiaohu_robot/Foundation/File.hpp"
+#include "xiaohu_robot/Foundation/Filesystem.hpp"
 #include <chrono>
 #include <stdexcept>
 #include <thread>
@@ -67,7 +67,7 @@ void TextToSpeechNode::run() {
     ros::spin();
 }
 
-void TextToSpeechNode::whenReceivedTextToSpeechRequest(StringMessagePointer request) {
+void TextToSpeechNode::whenReceivedTextToSpeechRequest(StringMessage::ConstPtr const& request) {
     if (isThreadEnded) {
         processThread.join();
         isThreadEnded = false;
@@ -114,7 +114,7 @@ void TextToSpeechNode::onlineTextToSpeech(std::string text) {
     if (errorCode != MSP_SUCCESS) {
         throw std::runtime_error("上传文本失败");
     }
-    File audioFile(configs.audioFilePath.c_str(), "wb");
+    BufferedFile audioFile(configs.audioFilePath.c_str(), "wb");
     audioFile.write(&wavePcmHeader, sizeof(wavePcmHeader));
 
     unsigned int audioDataSize{};

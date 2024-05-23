@@ -1,42 +1,69 @@
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <sstream>
-#include <utility>
+#include <stdexcept>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-MappingTask::MappingTask(MappingTaskMessagePointer message):
+MappingTask::MappingTask(MappingTaskRequestMessage::ConstPtr const& message):
+    requestMessage{*message},
     taskId{message->taskId} {}
 
 std::string MappingTask::toString() const {
-    std::ostringstream oss;
-    oss << "建图任务(" << taskId << ")";
-    return oss.str();
+    std::ostringstream content;
+    content << "建图任务 ID: " << taskId << '\n';
+    return content.str();
 }
 
 TaskType MappingTask::getTaskType() const {
     return TaskType::Mapping;
 }
 
-InspectionTask::InspectionTask(InspectionTaskMessagePointer message):
+TaskVersion MappingTask::getTaskVersion() const {
+    return TaskVersion::New;
+}
+
+MappingTaskRequestMessage MappingTask::toMessage() const {
+    return requestMessage;
+}
+
+InspectionTask::InspectionTask(InspectionTaskRequestMessage::ConstPtr const& message):
+    requestMessage{*message},
     taskId{message->taskId},
     patientName{message->patientName},
     patientPosition{message->patientPosition} {}
 
 std::string InspectionTask::toString() const {
-    std::ostringstream oss;
-    oss << "巡诊任务(" << taskId << ") {\n";
-    oss << "患者姓名：" << patientName << ",\n";
-    oss << "患者位置：" << patientPosition.toString() << "\n";
-    oss << "}";
-    return oss.str();
+    std::ostringstream content;
+    content << "巡诊任务 ID: " << taskId << '\n';
+    content << "患者姓名：" << patientName << ",\n";
+    content << "患者位置：" << patientPosition.toString();
+    return content.str();
 }
 
 TaskType InspectionTask::getTaskType() const {
     return TaskType::Inspection;
 }
 
-MedicineDeliveryTask::MedicineDeliveryTask(MedicineDeliveryTaskMessagePointer message):
+TaskVersion InspectionTask::getTaskVersion() const {
+    return TaskVersion::New;
+}
+
+InspectionTaskRequestMessage InspectionTask::toMessage() const {
+    return requestMessage;
+}
+
+InspectionTaskResultMessage InspectionTask::Result::toMessage() const {
+    InspectionTaskResultMessage result{TaskResultImplementation::toMessage()};
+    result.calledDoctor = calledDoctor;
+    result.measuredTemperature = measuredTemperature;
+    result.patientTemperature = patientTemperature;
+    return result;
+}
+
+MedicineDeliveryTask::MedicineDeliveryTask(MedicineDeliveryTaskRequestMessage::ConstPtr const& message):
+    requestMessage{*message},
     taskId{message->taskId},
     prescription{message->prescription},
     pharmacyName{message->pharmacyName},
@@ -45,59 +72,63 @@ MedicineDeliveryTask::MedicineDeliveryTask(MedicineDeliveryTaskMessagePointer me
     patientPosition{message->patientPosition} {}
 
 std::string MedicineDeliveryTask::toString() const {
-    std::ostringstream oss;
-    oss << "送药任务(" << taskId << ") {\n";
-    oss << "医嘱：" << prescription << ",\n";
-    oss << "药房名称：" << pharmacyName << ",\n";
-    oss << "药房位置：" << pharmacyPosition.toString() << "\n";
-    oss << "患者姓名：" << patientName << ",\n";
-    oss << "患者位置：" << patientPosition.toString() << "\n";
-    return oss.str();
+    std::ostringstream content;
+    content << "送药任务 ID: " << taskId << '\n';
+    content << "医嘱: " << prescription << '\n';
+    content << "药房名称: " << pharmacyName << '\n';
+    content << "药房位置: " << pharmacyPosition.toString() << '\n';
+    content << "患者姓名: " << patientName << '\n';
+    content << "患者位置: " << patientPosition.toString();
+    return content.str();
 }
 
 TaskType MedicineDeliveryTask::getTaskType() const {
     return TaskType::MedicineDelivery;
 }
 
-LegacyGeneralTask::LegacyGeneralTask(
-    TaskType type,
-    std::string mapName,
-    std::string savePath,
-    std::string pharmacy,
-    std::string patient,
-    std::string prescription,
-    Coordinate medicinePosition
-):
-    type{type},
-    mapName{std::move(mapName)},
-    savePath{std::move(savePath)},
-    pharmacy{std::move(pharmacy)},
-    patient{std::move(patient)},
-    prescription{std::move(prescription)} {}
+TaskVersion MedicineDeliveryTask::getTaskVersion() const {
+    return TaskVersion::New;
+}
 
-LegacyGeneralTask::LegacyGeneralTask(GeneralTaskMessagePointer message):
+MedicineDeliveryTaskRequestMessage MedicineDeliveryTask::toMessage() const {
+    return requestMessage;
+}
+
+MedicineDeliveryTaskResultMessage MedicineDeliveryTask::Result::toMessage() const {
+    MedicineDeliveryTaskResultMessage result{TaskResultImplementation::toMessage()};
+    result.deliveredMedicine = deliveredMedicine;
+    result.fetchedMedicine = fetchedMedicine;
+    return result;
+}
+
+LegacyGeneralTask::LegacyGeneralTask(LegacyGeneralTaskRequestMessage::ConstPtr const& message):
+    requestMessage{*message},
+    taskId{message->taskId},
     type{toType(message->type)},
-    mapName{std::move(message->mapName)},
-    savePath{std::move(message->savePath)},
-    pharmacy{std::move(message->pharmacy)},
-    patient{std::move(message->patient)},
-    prescription{std::move(message->prescription)} {}
+    pharmacy{message->pharmacy},
+    patient{message->patient},
+    prescription{message->prescription} {}
 
 std::string LegacyGeneralTask::toString() const {
-    std::ostringstream oss;
-    oss << "LegacyGeneralTask{\n"
-        << "type: " << xiaohu_robot::toString(type) << ",\n"
-        << "mapName: " << (mapName.empty() ? "NULL" : mapName) << ",\n"
-        << "savePath: " << (savePath.empty() ? "NULL" : savePath) << ",\n"
-        << "pharmacy: " << (pharmacy.empty() ? "NULL" : pharmacy) << ",\n"
-        << "patient: " << (patient.empty() ? "NULL" : patient) << ",\n"
-        << "prescription: " << (prescription.empty() ? "NULL" : prescription) << "\n"
-        << "}";
-    return oss.str();
+    std::ostringstream content;
+    content << "老式万能任务 ID:" << taskId << '\n';
+    content << "任务类型: " << xiaohu_robot::toString(type) << '\n';
+    content << "药房名称: " << (pharmacy.empty() ? "NULL" : pharmacy) << '\n';
+    content << "患者姓名: " << (patient.empty() ? "NULL" : patient) << '\n';
+    content << "医嘱: " << (prescription.empty() ? "NULL" : prescription);
+    return content.str();
 }
 
 TaskType LegacyGeneralTask::getTaskType() const {
     return type;
+}
+
+TaskVersion LegacyGeneralTask::getTaskVersion() const {
+    return TaskVersion::Legacy;
+}
+
+LegacyGeneralTaskRequestMessage LegacyGeneralTask::toMessage() const {
+    return requestMessage;
 }
 
 TaskType toType(std::string type) {
@@ -105,19 +136,21 @@ TaskType toType(std::string type) {
         return TaskType::Mapping;
     } else if (type == "Inspection") {
         return TaskType::Inspection;
-    } else {
+    } else if (type == "MedicineDelivery") {
         return TaskType::MedicineDelivery;
+    } else {
+        throw std::runtime_error("未支持的任务类型");
     }
 }
 
 std::string toString(TaskType type) {
     switch (type) {
     case TaskType::Mapping:
-        return "MappingTask";
+        return "建图任务";
     case TaskType::Inspection:
-        return "InspectionTasks";
+        return "巡检任务";
     case TaskType::MedicineDelivery:
-        return "MedicineDeliveryTasks";
+        return "送药任务";
     }
     return "";
 }

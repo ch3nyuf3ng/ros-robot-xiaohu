@@ -2,13 +2,10 @@
 #include "ros/console.h"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
+#include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include "xiaohu_robot/Foundation/VelocityCommand.hpp"
-#include "xiaohu_robot/InspectionTaskMessage.h"
-#include "xiaohu_robot/MappingTaskMessage.h"
-#include "xiaohu_robot/MedicineDeliveryTaskMessage.h"
-#include <chrono>
 #include <clocale>
 #include <memory>
 #include <sstream>
@@ -19,11 +16,9 @@
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
     std::setlocale(LC_ALL, "zh_CN.utf8");
-
     ros::init(argc, argv, "task_ctrl_node");
     TaskControllerNode taskControllerNode{TaskControllerNode::Configs{}};
     taskControllerNode.run();
-
     return 0;
 }
 
@@ -47,32 +42,51 @@ TaskControllerNode::TaskControllerNode(Configs configs):
         this
     )},
     taskState{},
-    currentTaskLegacy{},
-    legacyGeneralTasks{},
-    legacyGeneralTaskRequestSubscriber{nodeHandle.subscribe<GeneralTaskMessage>(
+    tasks{},
+    currentTaskStateRequestSubscriber{nodeHandle.subscribe<EmptyMessage>(
+        configs.currentTaskStateRequestTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedCurrentTaskStateRequest,
+        this
+    )},
+    currentTaskStateResultPublisher{nodeHandle.advertise<StringMessage>(
+        configs.currentTaskStateResultTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    legacyGeneralTaskRequestSubscriber{nodeHandle.subscribe<LegacyGeneralTaskRequestMessage>(
         configs.legacyGeneralTasksRequestTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedLegacyGeneralTaskRequest,
         this
     )},
-    tasks{},
-    inspectionTaskRequestSubscriber{nodeHandle.subscribe<InspectionTaskMessage>(
+    legacyGeneralTaskResultPublisher{nodeHandle.advertise<LegacyGeneralTaskResultMessage>(
+        configs.legacyGeneralTasksResultTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    inspectionTaskRequestSubscriber{nodeHandle.subscribe<InspectionTaskRequestMessage>(
         configs.inspectionTaskRequestTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedInspectionTaskRequest,
         this
     )},
-    mappingTaskRequestSubscriber{nodeHandle.subscribe<MappingTaskMessage>(
+    inspectionTaskResultPublisher{nodeHandle.advertise<InspectionTaskResultMessage>(
+        configs.inspectionTaskResultTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    mappingTaskRequestSubscriber{nodeHandle.subscribe<MappingTaskRequestMessage>(
         configs.mappingTaskRequestTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedMappingTaskRequest,
         this
     )},
-    medicineDeliveryRequestSubsriber{nodeHandle.subscribe<MedicineDeliveryTaskMessage>(
+    mappingTaskResultPublisher{nodeHandle.advertise<MappingTaskResultMessage>(
+        configs.mappingTaskResultTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    medicineDeliveryRequestSubsriber{nodeHandle.subscribe<MedicineDeliveryTaskRequestMessage>(
         configs.medicineDeliveryTaskRequestTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest,
         this
+    )},
+    medicineDeliveryTaskResultPublisher{nodeHandle.advertise<MedicineDeliveryTaskResultMessage>(
+        configs.medicineDeliveryTaskResultTopic, configs.nodeBasicConfig.messageBufferSize
     )},
     velocityControl{},
     velocityControlRequestPublisher{nodeHandle.advertise<VelocityCommandMessage>(
@@ -86,7 +100,7 @@ TaskControllerNode::TaskControllerNode(Configs configs):
     waypointNavigationRequestPublisher{nodeHandle.advertise<StringMessage>(
         configs.waypointNavigationRequestTopic, configs.nodeBasicConfig.messageBufferSize
     )},
-    waypointNavigationResultSubscriber{nodeHandle.subscribe<StringMessagePointer>(
+    waypointNavigationResultSubscriber{nodeHandle.subscribe<StringMessage::ConstPtr const&>(
         configs.waypointNavigationResultTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedNavigationResult,
@@ -94,6 +108,7 @@ TaskControllerNode::TaskControllerNode(Configs configs):
     )},
     waypointUnreachableTimes{0},
     obstacleClearing{},
+    navigation{},
     navigationClient{configs.coordinateNavigationTopic},
     textToSpeech{},
     textToSpeechRequestPublisher{
@@ -120,7 +135,7 @@ TaskControllerNode::TaskControllerNode(Configs configs):
     medicineDetectionRequestPublisher{nodeHandle.advertise<StringMessage>(
         configs.medcineDetectionRequestTopic, configs.nodeBasicConfig.messageBufferSize
     )},
-    medicineDetectionResultSubscriber{nodeHandle.subscribe<ObjectDetectionResultMessasgePointer>(
+    medicineDetectionResultSubscriber{nodeHandle.subscribe<ObjectDetectionResultMessasge::ConstPtr const&>(
         configs.medicineDetectionResultTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedMedicineDetectionResult,
@@ -130,14 +145,22 @@ TaskControllerNode::TaskControllerNode(Configs configs):
     medicineGraspRequestPublisher{nodeHandle.advertise<CoordinateMessage>(
         configs.medicineGraspRequestTopic, configs.nodeBasicConfig.messageBufferSize
     )},
-    medicineGraspResultSubscriber{nodeHandle.subscribe<StringMessagePointer>(
+    medicineGraspResultSubscriber{nodeHandle.subscribe<StringMessage::ConstPtr const&>(
         configs.medicineGraspResultTopic,
         configs.nodeBasicConfig.messageBufferSize,
         &TaskControllerNode::whenReceivedMedicineGraspResult,
         this
     )},
-    soundPlayClient{},
     temperatureMeasurement{},
+    temperatureMeasurementRequestPublisher{nodeHandle.advertise<EmptyMessage>(
+        configs.temperatureMeasurementRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    temperatureMeasurementResultSubscriber{nodeHandle.subscribe<Float64Message>(
+        configs.temperatureMeasurementResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedTemperatureMeasurementResult,
+        this
+    )},
     configs{std::move(configs)} {
     std::cout << "任务控制器已启动。" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -145,6 +168,26 @@ TaskControllerNode::TaskControllerNode(Configs configs):
 
 TaskControllerNode::~TaskControllerNode() {
     std::cout << "任务控制器已退出。" << std::endl;
+}
+
+TaskResult& TaskControllerNode::TaskStateContext::taskResult() {
+    return dynamic_cast<TaskResult&>(*taskResultPointer);
+}
+
+MappingTask::Result& TaskControllerNode::TaskStateContext::mappingTaskResult() {
+    return dynamic_cast<MappingTask::Result&>(*taskResultPointer);
+}
+
+InspectionTask::Result& TaskControllerNode::TaskStateContext::inspectionTaskResult() {
+    return dynamic_cast<InspectionTask::Result&>(*taskResultPointer);
+}
+
+MedicineDeliveryTask::Result& TaskControllerNode::TaskStateContext::medicineDeliveryTaskResult() {
+    return dynamic_cast<MedicineDeliveryTask::Result&>(*taskResultPointer);
+}
+
+LegacyGeneralTask::Result& TaskControllerNode::TaskStateContext::legacyGeneralTaskResult() {
+    return dynamic_cast<LegacyGeneralTask::Result&>(*taskResultPointer);
 }
 
 void TaskControllerNode::DelegationState::reset() {
@@ -174,6 +217,11 @@ void TaskControllerNode::SpeechRecognitionContext::reset() {
 void TaskControllerNode::MedicineDetectionAndGraspContext::reset() {
     DelegationState::reset();
     medicinePosition = Coordinate{};
+}
+
+void TaskControllerNode::TemperatureMeasurementContext::reset() {
+    DelegationState::reset();
+    temperature = Temperature{0, UnitTemperature::celcius};
 }
 
 void TaskControllerNode::run() {
@@ -216,8 +264,8 @@ void TaskControllerNode::run() {
         case TaskState::WaypointUnreachable:
             waypointUnreachable();
             break;
-        case TaskState::MeasuringTemperature:
-            measuringTemperature();
+        case TaskState::AskingMeasuringTemperature:
+            askMeasuringTemperature();
             break;
         case TaskState::AskingIfVideoNeeded:
             askIfVideoNeeded();
@@ -225,8 +273,8 @@ void TaskControllerNode::run() {
         case TaskState::VideoCommunicating:
             videoCommunicating();
             break;
-        case TaskState::HasMeasuredTemperature:
-            hasMeasuredTemperature();
+        case TaskState::MeasuringTemperature:
+            measureTemperature();
             break;
         case TaskState::ConfirmPatientRequest:
             confirmPatientRequest();
@@ -258,28 +306,28 @@ void TaskControllerNode::run() {
     }
 }
 
-MappingTask& TaskControllerNode::getCurrentMappingTask() {
-    return dynamic_cast<MappingTask&>(getCurrentTask());
-}
-
-InspectionTask& TaskControllerNode::getCurrentInspectionTask() {
-    return dynamic_cast<InspectionTask&>(getCurrentTask());
-}
-
-MedicineDeliveryTask& TaskControllerNode::getCurrentMedicineDeliveryTask() {
-    return dynamic_cast<MedicineDeliveryTask&>(getCurrentTask());
-}
-
-bool TaskControllerNode::isCurrentTaskLegacy() const {
-    return currentTaskLegacy.front();
-}
-
-SpecificTask& TaskControllerNode::getCurrentTask() {
+Task& TaskControllerNode::getCurrentTask() const {
     return *tasks.front();
 }
 
-LegacyGeneralTask& TaskControllerNode::getCurrentLegacyTask() {
-    return legacyGeneralTasks.front();
+bool TaskControllerNode::isCurrentTaskLegacy() const {
+    return getCurrentTask().getTaskVersion() == TaskVersion::Legacy;
+}
+
+MappingTask& TaskControllerNode::getCurrentMappingTask() const {
+    return dynamic_cast<MappingTask&>(getCurrentTask());
+}
+
+InspectionTask& TaskControllerNode::getCurrentInspectionTask() const {
+    return dynamic_cast<InspectionTask&>(getCurrentTask());
+}
+
+MedicineDeliveryTask& TaskControllerNode::getCurrentMedicineDeliveryTask() const {
+    return dynamic_cast<MedicineDeliveryTask&>(getCurrentTask());
+}
+
+LegacyGeneralTask& TaskControllerNode::getCurrentLegacyTask() const {
+    return dynamic_cast<LegacyGeneralTask&>(getCurrentTask());
 }
 
 TaskControllerNode::TaskState TaskControllerNode::getCurrentTaskState() const {
@@ -294,6 +342,14 @@ void TaskControllerNode::transferCurrentTaskStateTo(TaskState next) {
     taskState.previousTaskState = taskState.currentTaskState;
     taskState.currentTaskState = next;
     taskState.stateTransferring = true;
+
+    if (taskState.taskResultPointer) {
+        taskState.taskResult().logger << toString(taskState.currentTaskState);
+    }
+
+    StringMessage message;
+    message.data = toString(taskState.currentTaskState);
+    currentTaskStateResultPublisher.publish(message);
 
     ROS_INFO(
         "任务状态: %s -> %s",
@@ -322,7 +378,7 @@ void TaskControllerNode::checkNavigationState() {
 
 void TaskControllerNode::startInitialPositionCalibration() {
     if (!textToSpeech.hasStarted && !initPosition.hasStarted) {
-        initPosition.hasStarted = true;
+        initPosition.start();
         std::string hint{"请确认机器人初始位置位于充电基站。"};
         ROS_INFO("%s", hint.c_str());
         delegateTextToSpeech(hint);
@@ -334,16 +390,26 @@ void TaskControllerNode::startInitialPositionCalibration() {
 }
 
 void TaskControllerNode::readyToPerformTasks() {
-    if (currentTaskLegacy.empty()) {
+    if (tasks.empty()) {
         return;
     }
-    switch (isCurrentTaskLegacy() ? getCurrentLegacyTask().getTaskType() : getCurrentTask().getTaskType()) {
+    switch (getCurrentTask().getTaskType()) {
     case TaskType::Mapping:
         throw UnsupportedTaskException{};
     case TaskType::Inspection:
+        if (isCurrentTaskLegacy()) {
+            taskState.taskResultPointer = std::make_unique<LegacyGeneralTask::Result>(getCurrentLegacyTask());
+        } else {
+            taskState.taskResultPointer = std::make_unique<InspectionTask::Result>(getCurrentInspectionTask());
+        }
         transferCurrentTaskStateTo(TaskState::GoingToPatient);
         break;
     case TaskType::MedicineDelivery:
+        if (isCurrentTaskLegacy()) {
+            taskState.taskResultPointer = std::make_unique<LegacyGeneralTask::Result>(getCurrentLegacyTask());
+        } else {
+            taskState.taskResultPointer = std::make_unique<MedicineDeliveryTask::Result>(getCurrentMedicineDeliveryTask());
+        }
         transferCurrentTaskStateTo(TaskState::GoingToPharmacy);
         break;
     }
@@ -384,6 +450,7 @@ void TaskControllerNode::graspMedicine() {
         delegateObjectGrasping(medicineGrasp.medicinePosition);
     } else if (medicineGrasp.hasEnded) {
         transferCurrentTaskStateTo(TaskState::GoingToPatient);
+        taskState.medicineDeliveryTaskResult().fetchedMedicine = true;
         medicineGrasp.reset();
     }
 }
@@ -397,7 +464,7 @@ void TaskControllerNode::goToPatient() {
             case TaskType::Mapping:
                 throw UnsupportedTaskException{};
             case TaskType::Inspection:
-                transferCurrentTaskStateTo(TaskState::MeasuringTemperature);
+                transferCurrentTaskStateTo(TaskState::AskingMeasuringTemperature);
                 break;
             case TaskType::MedicineDelivery:
                 transferCurrentTaskStateTo(TaskState::SpeakingPrescription);
@@ -424,7 +491,7 @@ void TaskControllerNode::goToPatient() {
             case TaskType::Mapping:
                 throw UnsupportedTaskException{};
             case TaskType::Inspection:
-                transferCurrentTaskStateTo(TaskState::MeasuringTemperature);
+                transferCurrentTaskStateTo(TaskState::AskingMeasuringTemperature);
                 break;
             case TaskType::MedicineDelivery:
                 transferCurrentTaskStateTo(TaskState::SpeakingPrescription);
@@ -445,11 +512,11 @@ void TaskControllerNode::speakPrescription() {
         }
     } else {
         if (!textToSpeech.hasStarted) {
-            std::ostringstream oss;
-            oss << "患者" << getCurrentMedicineDeliveryTask().patientName << "，您有一份药品待取：";
-            oss << getCurrentMedicineDeliveryTask().prescription << "……";
-            oss << "请您伸手取药。";
-            delegateTextToSpeech(oss.str());
+            std::ostringstream stringContent{};
+            stringContent << "患者" << getCurrentMedicineDeliveryTask().patientName << "，您有一份药品待取：";
+            stringContent << getCurrentMedicineDeliveryTask().prescription << "……";
+            stringContent << "请您伸手取药。";
+            delegateTextToSpeech(stringContent.str());
         } else if (textToSpeech.hasEnded) {
             transferCurrentTaskStateTo(TaskState::AskingIfGrabbedMedicine);
             textToSpeech.reset();
@@ -481,8 +548,8 @@ void TaskControllerNode::askIfGrabbedMedicine() {
 void TaskControllerNode::waitForGrabbingMedicine() {
     if (!textToSpeech.hasStarted && !waiting.hasStarted) {
         delegateTextToSpeech("好的，我会再等待您十秒钟。");
-        waiting.hasStarted = true;
-        nodeTiming.addTimedTask(10_s, [this]() { waiting.hasEnded = true; }, "等待患者抓取药品结束");
+        waiting.start();
+        nodeTiming.addTimedTask(10_s, [this]() { waiting.end(); }, "等待患者抓取药品结束");
     } else if (textToSpeech.hasEnded && waiting.hasEnded) {
         transferCurrentTaskStateTo(TaskState::AskingIfGrabbedMedicine);
         textToSpeech.reset();
@@ -493,9 +560,10 @@ void TaskControllerNode::waitForGrabbingMedicine() {
 void TaskControllerNode::dropMedicine() {
     if (!manipulatorControl.hasStarted) {
         delegateControlingRobotManipulator(GripperControl{15_cm});
-        nodeTiming.addTimedTask(3_s, [this]() { manipulatorControl.hasEnded = true; }, "结束张开机械手");
+        nodeTiming.addTimedTask(3_s, [this]() { manipulatorControl.end(); }, "结束张开机械手");
     } else if (manipulatorControl.hasEnded) {
         transferCurrentTaskStateTo(TaskState::SteppingBackward);
+        taskState.medicineDeliveryTaskResult().deliveredMedicine = true;
         manipulatorControl.reset();
     }
 }
@@ -507,7 +575,7 @@ void TaskControllerNode::stepBackward() {
             5_s,
             [this]() {
                 delegateVelocityControl(0_m_per_s);
-                velocityControl.hasEnded = true;
+                velocityControl.end();
             },
             "停止后退"
         );
@@ -522,7 +590,7 @@ void TaskControllerNode::retractManipulaor() {
         delegateControlingRobotManipulator(
             MultiPartControl{std::make_unique<ArmControl>(0_cm), std::make_unique<GripperControl>(0_cm)}
         );
-        nodeTiming.addTimedTask(5_s, [this]() { manipulatorControl.hasEnded = true; }, "停止回收机械臂");
+        nodeTiming.addTimedTask(5_s, [this]() { manipulatorControl.end(); }, "停止回收机械臂");
     } else if (manipulatorControl.hasEnded) {
         transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
         manipulatorControl.reset();
@@ -530,29 +598,26 @@ void TaskControllerNode::retractManipulaor() {
 }
 
 void TaskControllerNode::haveFinishedPreviousTask() {
+    ROS_INFO("已完成任务:\n%s", getCurrentTask().toString().c_str());
     if (isCurrentTaskLegacy()) {
-        switch (getCurrentLegacyTask().getTaskType()) {
+        legacyGeneralTaskResultPublisher.publish(taskState.legacyGeneralTaskResult().toMessage());
+    } else {
+        switch (getCurrentTask().getTaskType()) {
         case TaskType::Mapping:
-            throw UnsupportedTaskException{};
+            mappingTaskResultPublisher.publish(taskState.mappingTaskResult().toMessage());
+            break;
         case TaskType::Inspection:
-            ROS_INFO("已完成巡诊任务 (%s)。", getCurrentLegacyTask().patient.c_str());
+            inspectionTaskResultPublisher.publish(taskState.inspectionTaskResult().toMessage());
             break;
         case TaskType::MedicineDelivery:
-            ROS_INFO(
-                "已完成送药任务 (%s -> %s)。",
-                getCurrentLegacyTask().pharmacy.c_str(),
-                getCurrentLegacyTask().patient.c_str()
-            );
+            medicineDeliveryTaskResultPublisher.publish(taskState.medicineDeliveryTaskResult().toMessage());
             break;
         }
-        legacyGeneralTasks.pop_front();
-    } else {
-        ROS_INFO("已完成%s。", getCurrentTask().toString().c_str());
-        tasks.pop_front();
     }
-    currentTaskLegacy.pop_front();
+    taskState.taskResultPointer = nullptr;
+    tasks.pop_front();
     showRemainedTasksCount();
-    if (!currentTaskLegacy.empty()) {
+    if (!tasks.empty()) {
         transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
     } else {
         transferCurrentTaskStateTo(TaskState::GoingToBaseStation);
@@ -566,10 +631,13 @@ void TaskControllerNode::askIfVideoNeeded() {
         delegateSpeechRecognition(10_s);
     } else if (speechReognition.hasFailed) {
         transferCurrentTaskStateTo(TaskState::SpeechRecognitionFailed);
+        speechReognition.reset();
         textToSpeech.reset();
     } else if (speechReognition.hasEnded) {
         transferCurrentTaskStateTo(TaskState::ConfirmPatientRequest);
+        confirmSpeechRecognition = speechReognition;
         speechRecognitionContinuousFailureTimes = 0;
+        speechReognition.reset();
         textToSpeech.reset();
     }
 }
@@ -591,7 +659,7 @@ void TaskControllerNode::speechRecognitionFailed() {
 void TaskControllerNode::giveUpCurrentTask() {
     if (!textToSpeech.hasStarted && !exceptionHandling.hasStarted) {
         delegateTextToSpeech("重复出现异常。任务中断。");
-        exceptionHandling.hasStarted = true;
+        exceptionHandling.start();
     } else if (textToSpeech.hasEnded && exceptionHandling.hasEnded) {
         transferCurrentTaskStateTo(getPreviousTaskState());
         textToSpeech.reset();
@@ -601,18 +669,18 @@ void TaskControllerNode::giveUpCurrentTask() {
 
 void TaskControllerNode::confirmPatientRequest() {
     if (!textToSpeech.hasStarted) {
-        if (speechReognition.foundYes) {
+        if (confirmSpeechRecognition.foundYes) {
             delegateTextToSpeech("好的，已为您安排视频通话。");
         } else {
             delegateTextToSpeech("好的，已取消视频通话。");
         }
     } else if (textToSpeech.hasEnded) {
-        if (speechReognition.foundYes) {
+        if (confirmSpeechRecognition.foundYes) {
             transferCurrentTaskStateTo(TaskState::VideoCommunicating);
         } else {
             transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
         }
-        speechReognition.reset();
+        confirmSpeechRecognition.reset();
         textToSpeech.reset();
     }
 }
@@ -627,7 +695,7 @@ void TaskControllerNode::videoCommunicating() {
 }
 
 void TaskControllerNode::goToBaseStation() {
-    if (currentTaskLegacy.empty()) {
+    if (tasks.empty()) {
         if (!navigation.hasStarted) {
             navigation.start();
             navigationClient.sendGoal(baseStatePosition.toNavigationGoal());
@@ -661,8 +729,8 @@ void TaskControllerNode::waypointUnreachable() {
     if (!textToSpeech.hasStarted) {
         delegateTextToSpeech("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
     } else if (textToSpeech.hasEnded && !obstacleClearing.hasStarted) {
-        obstacleClearing.hasStarted = true;
-        nodeTiming.addTimedTask(20_s, [this]() { obstacleClearing.hasEnded = true; }, "等待清除障碍物结束");
+        obstacleClearing.start();
+        nodeTiming.addTimedTask(20_s, [this]() { obstacleClearing.end(); }, "等待清除障碍物结束");
     } else if (textToSpeech.hasEnded && obstacleClearing.hasEnded) {
         transferCurrentTaskStateTo(getPreviousTaskState());
         textToSpeech.reset();
@@ -670,33 +738,50 @@ void TaskControllerNode::waypointUnreachable() {
     }
 }
 
-void TaskControllerNode::measuringTemperature() {
+void TaskControllerNode::askMeasuringTemperature() {
     if (!textToSpeech.hasStarted) {
-        delegateTextToSpeech("请将手腕对准温度传感器测量体温。");
-    } else if (textToSpeech.hasEnded && !temperatureMeasurement.hasStarted) {
-        temperatureMeasurement.hasStarted = true;
-        nodeTiming.addTimedTask(3_s, [this]() { temperatureMeasurement.hasEnded = true; }, "测温结束");
-    } else if (textToSpeech.hasEnded && temperatureMeasurement.hasEnded) {
-        transferCurrentTaskStateTo(TaskState::HasMeasuredTemperature);
+        std::ostringstream stringContent{};
+        stringContent << getCurrentInspectionTask().patientName << "，您好。小护正在执行巡检任务。";
+        stringContent << "请将手腕对准温度传感器测量体温。";
+        delegateTextToSpeech(stringContent.str());
+    } else if (textToSpeech.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::MeasuringTemperature);
         textToSpeech.reset();
-        temperatureMeasurement.reset();
     }
 }
 
-void TaskControllerNode::hasMeasuredTemperature() {
-    if (!textToSpeech.hasStarted) {
-        delegateTextToSpeech("测温结束，您的体温正常。");
+void TaskControllerNode::measureTemperature() {
+    if (!temperatureMeasurement.hasStarted) {
+        delegateTemperatureMeasurement();
+    } else if (temperatureMeasurement.hasEnded && !textToSpeech.hasStarted) {
+        std::ostringstream stringContent{};
+        stringContent << "测量的体温为：" << std::fixed << std::setprecision(2) << temperatureMeasurement.temperature.getValue() << "摄氏度。";
+        if (temperatureMeasurement.temperature < Temperature{36.0, UnitTemperature::celcius}) {
+            stringContent << "体温数值异常偏低，您需要将手腕紧贴传感器探头。";
+        } else if (temperatureMeasurement.temperature < Temperature{37.3, UnitTemperature::celcius}) {
+            stringContent << "体温正常。";
+        } else {
+            stringContent << "您发烧了。";
+        }
+        delegateTextToSpeech(stringContent.str());
     } else if (textToSpeech.hasEnded) {
-        transferCurrentTaskStateTo(TaskState::AskingIfVideoNeeded);
+        if (temperatureMeasurement.temperature < Temperature{36.0, UnitTemperature::celcius}) {
+            transferCurrentTaskStateTo(TaskState::AskingMeasuringTemperature);
+        } else {
+            transferCurrentTaskStateTo(TaskState::AskingIfVideoNeeded);
+            taskState.inspectionTaskResult().measuredTemperature = true;
+            taskState.inspectionTaskResult().patientTemperature = temperatureMeasurement.temperature;
+        }
+        temperatureMeasurement.reset();
         textToSpeech.reset();
     }
 }
 
 void TaskControllerNode::showRemainedTasksCount() const {
-    if (currentTaskLegacy.empty())
+    if (tasks.empty())
         ROS_INFO("没有任务可被执行。");
     else {
-        ROS_INFO("剩余任务数量: %zd", legacyGeneralTasks.size() + tasks.size());
+        ROS_INFO("剩余任务数量: %zd", tasks.size());
     }
 }
 
@@ -708,37 +793,46 @@ void TaskControllerNode::displayInitializationResult() const {
     ROS_INFO("任务控制器已初始化。");
 }
 
-void TaskControllerNode::whenReceivedInitPositionRequest(CoordinateMessagePointer message) {
+void TaskControllerNode::whenReceivedCurrentTaskStateRequest(EmptyMessage::ConstPtr const&) {
+    StringMessage message;
+    message.data = toString(taskState.currentTaskState);
+    currentTaskStateResultPublisher.publish<StringMessage>(message);
+}
+
+void TaskControllerNode::whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const& message) {
     baseStatePosition = Coordinate{message};
     ROS_INFO("充电基站坐标已初始化。");
     std::cout << baseStatePosition.toString() << std::endl;
 }
 
-void TaskControllerNode::whenReceivedInitPositionResult(StatusAndDescriptionMessagePointer result) {
+void TaskControllerNode::whenReceivedInitPositionResult(StatusAndDescriptionMessage::ConstPtr const& result) {
     if (!initPosition.hasStarted) {
         return;
     }
     if (result->status == StatusAndDescriptionMessage::done) {
-        initPosition.hasEnded = true;
+        initPosition.end();
     }
 }
 
-void TaskControllerNode::whenReceivedMappingTaskRequest(MappingTaskMessagePointer message) {
+void TaskControllerNode::whenReceivedMappingTaskRequest(MappingTaskRequestMessage::ConstPtr const& message) {
     tasks.emplace_back(std::make_unique<MappingTask>(message));
-    currentTaskLegacy.emplace_back(false);
+    ROS_INFO("收到一个任务:\n%s", tasks.back()->toString().c_str());
 }
 
-void TaskControllerNode::whenReceivedInspectionTaskRequest(InspectionTaskMessagePointer message) {
+void TaskControllerNode::whenReceivedInspectionTaskRequest(InspectionTaskRequestMessage::ConstPtr const& message) {
     tasks.emplace_back(std::make_unique<InspectionTask>(message));
-    currentTaskLegacy.emplace_back(false);
+    ROS_INFO("收到一个任务:\n%s", tasks.back()->toString().c_str());
 }
 
-void TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest(MedicineDeliveryTaskMessagePointer message) {
+void TaskControllerNode::whenReceivedMedicineDeliveryTaskRequest(
+    MedicineDeliveryTaskRequestMessage::ConstPtr const& message
+) {
     tasks.emplace_back(std::make_unique<MedicineDeliveryTask>(message));
-    currentTaskLegacy.emplace_back(false);
+    ROS_INFO("收到一个任务:\n%s", tasks.back()->toString().c_str());
 }
 
-void TaskControllerNode::whenReceivedMedicineDetectionResult(ObjectDetectionResultMessasgePointer coordinates) {
+void TaskControllerNode::whenReceivedMedicineDetectionResult(ObjectDetectionResultMessasge::ConstPtr const& coordinates
+) {
     if (!medicineDetection.hasStarted) {
         return;
     }
@@ -750,7 +844,7 @@ void TaskControllerNode::whenReceivedMedicineDetectionResult(ObjectDetectionResu
     medicineDetection.end();
 }
 
-void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer message) {
+void TaskControllerNode::whenReceivedNavigationResult(StringMessage::ConstPtr const& message) {
     if (!waypointNavigation.hasStarted) {
         return;
     }
@@ -761,7 +855,7 @@ void TaskControllerNode::whenReceivedNavigationResult(StringMessagePointer messa
     }
 }
 
-void TaskControllerNode::whenReceivedMedicineGraspResult(StringMessagePointer message) {
+void TaskControllerNode::whenReceivedMedicineGraspResult(StringMessage::ConstPtr const& message) {
     if (!medicineGrasp.hasStarted) {
         return;
     }
@@ -772,23 +866,13 @@ void TaskControllerNode::whenReceivedMedicineGraspResult(StringMessagePointer me
     }
 }
 
-void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(GeneralTaskMessagePointer message) {
-    legacyGeneralTasks.emplace_back(LegacyGeneralTask{message});
-    currentTaskLegacy.emplace_back(true);
-    ROS_INFO("收到一个任务:\n%s", legacyGeneralTasks.back().toString().c_str());
+void TaskControllerNode::whenReceivedLegacyGeneralTaskRequest(LegacyGeneralTaskRequestMessage::ConstPtr const& message
+) {
+    tasks.emplace_back(std::make_unique<LegacyGeneralTask>(message));
+    ROS_INFO("收到一个任务:\n%s", tasks.back()->toString().c_str());
 }
 
-void TaskControllerNode::whenReceivedStateControlCommand(StringMessagePointer message) {
-    if (message->data == "clear") {
-        while (legacyGeneralTasks.size() > 1) {
-            legacyGeneralTasks.pop_back();
-        }
-        ROS_INFO("已取消当前任务，并清除剩余任务。");
-        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
-    }
-}
-
-void TaskControllerNode::whenReceivedTextToSpeechResult(StatusAndDescriptionMessagePointer message) {
+void TaskControllerNode::whenReceivedTextToSpeechResult(StatusAndDescriptionMessage::ConstPtr const& message) {
     if (!textToSpeech.hasStarted) {
         return;
     }
@@ -799,7 +883,7 @@ void TaskControllerNode::whenReceivedTextToSpeechResult(StatusAndDescriptionMess
     }
 }
 
-void TaskControllerNode::whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessagePointer message) {
+void TaskControllerNode::whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessage::ConstPtr const& message) {
     if (!speechReognition.hasStarted) {
         return;
     }
@@ -813,8 +897,16 @@ void TaskControllerNode::whenReceivedSpeechRecognitionResult(StatusAndDescriptio
     }
 }
 
+void TaskControllerNode::whenReceivedTemperatureMeasurementResult(Float64Message::ConstPtr const& result) {
+    if (!temperatureMeasurement.hasStarted) {
+        return;
+    }
+    temperatureMeasurement.temperature = Temperature{result->data, UnitTemperature::celcius};
+    temperatureMeasurement.end();
+}
+
 void TaskControllerNode::delegateVelocityControl(LinearSpeed forward) {
-    velocityControl.hasStarted = true;
+    velocityControl.start();
     ROS_DEBUG("将前进速度设置为 %s。", forward.toString().c_str());
     VelocityCommand velocityCommand{forward, 0_m_per_s, 0_deg_per_s};
     velocityControlRequestPublisher.publish(velocityCommand.toMessage());
@@ -834,25 +926,25 @@ void TaskControllerNode::delegateObjectDetectionControl(ObjectDetectionControl b
 }
 
 void TaskControllerNode::delegateNavigatingToWaypoint(std::string waypointName) {
-    waypointNavigation.hasStarted = true;
+    waypointNavigation.start();
     ROS_DEBUG("将导航至 %s。", waypointName.c_str());
     waypointNavigationRequestPublisher.publish(createWaypointMessage(std::move(waypointName)));
 }
 
 void TaskControllerNode::delegateControlingRobotManipulator(ManipulatorControl const& plan) {
-    manipulatorControl.hasStarted = true;
+    manipulatorControl.start();
     ROS_DEBUG("将把机械臂状态设置为 %s。", plan.toString().c_str());
     manipulatiorControlRequestPublisher.publish(plan.toMessage());
 }
 
 void TaskControllerNode::delegateObjectGrasping(Coordinate coordinate) {
-    medicineGrasp.hasStarted = true;
+    medicineGrasp.start();
     ROS_DEBUG("将抓取位于 %s 的物体。", coordinate.toString().c_str());
     medicineGraspRequestPublisher.publish(coordinate.toMessage());
 }
 
 void TaskControllerNode::delegateTextToSpeech(std::string content) {
-    textToSpeech.hasStarted = true;
+    textToSpeech.start();
     ROS_DEBUG("将以下内容转为语音：%s.", content.c_str());
     StringMessage message;
     message.data = content;
@@ -860,10 +952,15 @@ void TaskControllerNode::delegateTextToSpeech(std::string content) {
 }
 
 void TaskControllerNode::delegateSpeechRecognition(Duration duration) {
-    speechReognition.hasStarted = true;
+    speechReognition.start();
     StringMessage request;
     request.data = std::to_string(duration.getBaseUnitValue());
     speechRecognitionRequestPublisher.publish<StringMessage>(request);
+}
+
+void TaskControllerNode::delegateTemperatureMeasurement() {
+    temperatureMeasurement.start();
+    temperatureMeasurementRequestPublisher.publish(EmptyMessage{});
 }
 
 StringMessage TaskControllerNode::createWaypointMessage(std::string name) {
@@ -885,7 +982,7 @@ StringMessage TaskControllerNode::createObjectDetectionControlMessage(ObjectDete
     return message;
 }
 
-void TaskControllerNode::displayDetectedObjects(ObjectDetectionResultMessasgePointer coordinates_ptr) {
+void TaskControllerNode::displayDetectedObjects(ObjectDetectionResultMessasge::ConstPtr const& coordinates_ptr) {
     std::size_t const total_amount{coordinates_ptr->name.size()};
     ROS_INFO("Total amount of objects: %zd", total_amount);
     for (std::size_t object_id{0}; object_id < total_amount; ++object_id) {
@@ -936,14 +1033,14 @@ std::string TaskControllerNode::toString(TaskState taskState) {
         return "前往充电基站";
     case TaskState::WaypointUnreachable:
         return "航点不可达";
-    case TaskState::MeasuringTemperature:
-        return "测量体温中";
+    case TaskState::AskingMeasuringTemperature:
+        return "提示患者测量体温";
     case TaskState::AskingIfVideoNeeded:
         return "询问患者是否需要视频通话";
     case TaskState::VideoCommunicating:
         return "视频通话中";
-    case TaskState::HasMeasuredTemperature:
-        return "已测量患者体温";
+    case TaskState::MeasuringTemperature:
+        return "测量患者体温中";
     case TaskState::ConfirmPatientRequest:
         return "确认患者语音";
     case TaskState::SpeechRecognitionFailed:

@@ -191,6 +191,16 @@ public:
     UnitFrequency const* getBaseUnit() const override;
 };
 
+class UnitTemperature final: public LinearConvertibleUnitBase<UnitTemperature> {
+public:
+    static std::shared_ptr<UnitTemperature const> const celcius;
+    static std::shared_ptr<UnitTemperature const> const kelvin;
+
+    using LinearConvertibleUnitBase<UnitTemperature>::LinearConvertibleUnitBase;
+
+    UnitTemperature const* getBaseUnit() const override;
+};
+
 template<typename UnitType, typename = std::enable_if_t<std::is_base_of<Unit, UnitType>::value>>
 struct Measurement final: public Equatable<Measurement<UnitType>>, public Printable {
 private:

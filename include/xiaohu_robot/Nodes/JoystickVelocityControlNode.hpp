@@ -39,7 +39,7 @@ private:
     Subscriber const joystickMessageSubscriber;
 
     void sendVelocityCommand(VelocityCommand);
-    void whenReceivedJoystickMessage(JoystickMessagePointer);
+    void whenReceivedJoystickMessage(JoystickMessage::ConstPtr const&);
 };
 }  // namespace Nodes
 }  // namespace xiaohu_robot

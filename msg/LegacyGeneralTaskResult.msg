@@ -1,0 +1,2 @@
+xiaohu_robot/LegacyGeneralTaskRequest taskRequest
+xiaohu_robot/StatusAndDescription statusAndDescription
