@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   nav_msgs
   xfyun_waterplus
+  serial
 )
 
 ## System dependencies are found with CMake's conventions
@@ -135,6 +136,7 @@ catkin_package(
     wpb_home_behaviors
     actionlib
     move_base_msgs
+    serial
 # DEPENDS system_lib
 )
 

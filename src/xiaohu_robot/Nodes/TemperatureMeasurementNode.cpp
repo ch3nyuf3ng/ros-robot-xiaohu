@@ -6,6 +6,7 @@
 #include <chrono>
 #include <clocale>
 #include <memory>
+#include <stdexcept>
 #include <thread>
 #include <utility>
 
@@ -40,7 +41,13 @@ TemperatureMeasurementNode::TemperatureMeasurementNode(Configs configs):
     bool useRealValue;
     if (nodeHandle.getParam("real_temperature", useRealValue) && useRealValue) {
         ROS_INFO("使用真实温度。");
-        infraredTemperatureSensor = std::make_unique<InfraredTemperatureSensor>();
+        try {
+            infraredTemperatureSensor = std::make_unique<InfraredTemperatureSensorUart>();
+        } catch (std::runtime_error const& e) {
+            std::cout << e.what() << std::endl;
+            std::cout << "使用 UART 协议通信失败，尝试使用 I2C 协议。" << std::endl;
+            infraredTemperatureSensor = std::make_unique<InfraredTemperatureSensorI2c>();
+        }
     } else {
         ROS_INFO("使用模拟温度。");
     }

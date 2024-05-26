@@ -1,0 +1,6 @@
+<launch>
+    <group ns="xiaohu_robot">
+        <param name="real_temperature" value="true"/>
+    </group>
+    <node pkg="xiaohu_robot" type="temperature_measurement_node" name="temperature_measurement_node" output="screen" />
+</launch>
