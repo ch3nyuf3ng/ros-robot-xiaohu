@@ -1,9 +1,9 @@
 #pragma once
 
-#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #ifndef XIAOHU_ROBOT_NODES_TEMPERATURE_MEASUREMENT_NODE_HPP
 #define XIAOHU_ROBOT_NODES_TEMPERATURE_MEASUREMENT_NODE_HPP
 
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/InfraredTemperatureSensor.hpp"
 #include "xiaohu_robot/Foundation/NodeControl.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
