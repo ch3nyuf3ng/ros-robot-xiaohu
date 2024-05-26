@@ -11,7 +11,8 @@ xiaohu_robot/InspectionTaskRequest "{\
     }\
 }"
 
-rostopic pub -1 /xiaohu_robot/medicine_delivery_task_request xiaohu_robot/MedicineDeliveryTaskRequest "{\
+rostopic pub -1 /xiaohu_robot/medicine_delivery_task_request \
+xiaohu_robot/MedicineDeliveryTaskRequest "{\
     taskId: '1', \
     prescription: '感冒灵颗粒：一天三次，一次一包，开水冲服', \
     pharmacyName: '药房', \
