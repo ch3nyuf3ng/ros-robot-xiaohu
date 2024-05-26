@@ -50,7 +50,7 @@ std::string const& CommonConfigs::packagePath() {
 }
 
 Frequency const& CommonConfigs::loopFrequency() {
-    static Frequency value{10_Hz};
+    static Frequency value{30_Hz};
     return value;
 }
 

@@ -221,6 +221,7 @@ void TaskControllerNode::MedicineDetectionAndGraspContext::reset() {
 
 void TaskControllerNode::TemperatureMeasurementContext::reset() {
     DelegationState::reset();
+    isRemeasuring = false;
     temperature = Temperature{0, UnitTemperature::celcius};
 }
 
@@ -408,7 +409,8 @@ void TaskControllerNode::readyToPerformTasks() {
         if (isCurrentTaskLegacy()) {
             taskState.taskResultPointer = std::make_unique<LegacyGeneralTask::Result>(getCurrentLegacyTask());
         } else {
-            taskState.taskResultPointer = std::make_unique<MedicineDeliveryTask::Result>(getCurrentMedicineDeliveryTask());
+            taskState.taskResultPointer
+                = std::make_unique<MedicineDeliveryTask::Result>(getCurrentMedicineDeliveryTask());
         }
         transferCurrentTaskStateTo(TaskState::GoingToPharmacy);
         break;
@@ -559,7 +561,7 @@ void TaskControllerNode::waitForGrabbingMedicine() {
 
 void TaskControllerNode::dropMedicine() {
     if (!manipulatorControl.hasStarted) {
-        delegateControlingRobotManipulator(GripperControl{15_cm});
+        delegateControlingRobotManipulator(GripperControl{20_cm});
         nodeTiming.addTimedTask(3_s, [this]() { manipulatorControl.end(); }, "结束张开机械手");
     } else if (manipulatorControl.hasEnded) {
         transferCurrentTaskStateTo(TaskState::SteppingBackward);
@@ -614,6 +616,7 @@ void TaskControllerNode::haveFinishedPreviousTask() {
             break;
         }
     }
+    ROS_INFO("已发布任务结果。");
     taskState.taskResultPointer = nullptr;
     tasks.pop_front();
     showRemainedTasksCount();
@@ -740,10 +743,14 @@ void TaskControllerNode::waypointUnreachable() {
 
 void TaskControllerNode::askMeasuringTemperature() {
     if (!textToSpeech.hasStarted) {
-        std::ostringstream stringContent{};
-        stringContent << getCurrentInspectionTask().patientName << "，您好。小护正在执行巡检任务。";
-        stringContent << "请将手腕对准温度传感器测量体温。";
-        delegateTextToSpeech(stringContent.str());
+        if (!temperatureMeasurement.isRemeasuring) {
+            std::ostringstream stringContent{};
+            stringContent << getCurrentInspectionTask().patientName << "，您好。小护正在执行巡检任务。";
+            stringContent << "请将手腕对准温度传感器测量体温。";
+            delegateTextToSpeech(stringContent.str());
+        } else {
+            delegateTextToSpeech("重新测量体温中。");
+        }
     } else if (textToSpeech.hasEnded) {
         transferCurrentTaskStateTo(TaskState::MeasuringTemperature);
         textToSpeech.reset();
@@ -755,9 +762,11 @@ void TaskControllerNode::measureTemperature() {
         delegateTemperatureMeasurement();
     } else if (temperatureMeasurement.hasEnded && !textToSpeech.hasStarted) {
         std::ostringstream stringContent{};
-        stringContent << "测量的体温为：" << std::fixed << std::setprecision(2) << temperatureMeasurement.temperature.getValue() << "摄氏度。";
+        stringContent << "测量的体温为：" << std::fixed << std::setprecision(2)
+                      << temperatureMeasurement.temperature.getValue() << "摄氏度。";
         if (temperatureMeasurement.temperature < Temperature{36.0, UnitTemperature::celcius}) {
             stringContent << "体温数值异常偏低，您需要将手腕紧贴传感器探头。";
+            temperatureMeasurement.isRemeasuring = true;
         } else if (temperatureMeasurement.temperature < Temperature{37.3, UnitTemperature::celcius}) {
             stringContent << "体温正常。";
         } else {
@@ -767,12 +776,14 @@ void TaskControllerNode::measureTemperature() {
     } else if (textToSpeech.hasEnded) {
         if (temperatureMeasurement.temperature < Temperature{36.0, UnitTemperature::celcius}) {
             transferCurrentTaskStateTo(TaskState::AskingMeasuringTemperature);
+            temperatureMeasurement.reset();
+            temperatureMeasurement.isRemeasuring = true;
         } else {
             transferCurrentTaskStateTo(TaskState::AskingIfVideoNeeded);
             taskState.inspectionTaskResult().measuredTemperature = true;
             taskState.inspectionTaskResult().patientTemperature = temperatureMeasurement.temperature;
+            temperatureMeasurement.reset();
         }
-        temperatureMeasurement.reset();
         textToSpeech.reset();
     }
 }

@@ -169,7 +169,7 @@ void Recorder::record() {
     while (true) {
         checkThreadsException();
         if (state == State::Constructing || state == State::Ready || state == State::Stopping) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         } else if (state == State::Destructing) {
             std::cout << "录音线程结束。" << std::endl;

@@ -127,6 +127,7 @@ private:
     };
 
     struct TemperatureMeasurementContext final: public DelegationState {
+        bool isRemeasuring{false};
         Temperature temperature{0, UnitTemperature::celcius};
 
         void reset() override;

@@ -144,6 +144,7 @@ void SpeechRecognitionNode::whenReceivedSpeechRecognitionRequest(StringMessage::
         auto durationRepr{std::stol(request->data)};
         std::chrono::seconds duration{durationRepr};
         soundplayClient.play(1);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         processThread = std::thread([duration, this]() {
             try {
                 StatusAndDescriptionMessage result;
@@ -268,6 +269,7 @@ Recorder::EndCallback SpeechRecognitionNode::whenRecorderStopped(RecorderContext
             if (resultPointer) {
                 context.result = resultPointer;
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         context.hasGotResult = true;
         int endErrorCode{MSP_SUCCESS};

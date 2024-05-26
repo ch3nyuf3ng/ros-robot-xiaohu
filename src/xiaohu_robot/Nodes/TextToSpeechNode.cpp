@@ -145,7 +145,7 @@ void TextToSpeechNode::onlineTextToSpeech(std::string text) {
     }
     soundplayClient.playWave(configs.audioFilePath);
     auto duration{wavePcmHeader.subChunk2Size / wavePcmHeader.byteRate};
-    std::this_thread::sleep_for(std::chrono::seconds(duration + 1));
+    std::this_thread::sleep_for(std::chrono::seconds(duration + 2));
 }
 }  // namespace Nodes
 }  // namespace xiaohu_robot
