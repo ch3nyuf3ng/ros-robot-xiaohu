@@ -132,6 +132,8 @@ TaskControllerNode::TaskControllerNode(Configs configs):
     )},
     speechRecognitionContinuousFailureTimes{0},
     medicineDetection{},
+    medicinePreparation{},
+    medicineDetectionFailedTimes{0},
     medicineDetectionRequestPublisher{nodeHandle.advertise<StringMessage>(
         configs.medcineDetectionRequestTopic, configs.nodeBasicConfig.messageBufferSize
     )},
@@ -161,6 +163,18 @@ TaskControllerNode::TaskControllerNode(Configs configs):
         &TaskControllerNode::whenReceivedTemperatureMeasurementResult,
         this
     )},
+    videoCall{},
+    videoCallRequestPublisher{nodeHandle.advertise<EmptyMessage>(
+        configs.videoCallingRequestTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    videoCallResultSubscriber{nodeHandle.subscribe<StatusAndDescriptionMessage>(
+        configs.videoCallingResultTopic,
+        configs.nodeBasicConfig.messageBufferSize,
+        &TaskControllerNode::whenReceivedVideoCallResult,
+        this
+    )},
+    waiting{},
+    exceptionHandling{},
     configs{std::move(configs)} {
     std::cout << "任务控制器已启动。" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -229,8 +243,8 @@ void TaskControllerNode::run() {
     ros::Rate loopRate{configs.nodeBasicConfig.loopFrequency};
     while (ros::ok()) {
         switch (getCurrentTaskState()) {
-        case TaskState::CalibratingInitialPosition:
-            startInitialPositionCalibration();
+        case TaskState::WaitingForPositionInitialization:
+            waitForPositionInitialisation();
             break;
         case TaskState::ReadyToPerformTasks:
             readyToPerformTasks();
@@ -294,6 +308,12 @@ void TaskControllerNode::run() {
             break;
         case TaskState::WaitingForGrabbingMedicine:
             waitForGrabbingMedicine();
+            break;
+        case TaskState::MedicineDetectionFailed:
+            medicineDetectionFailed();
+            break;
+        case TaskState::VideoCallFailed:
+            videoCallFailed();
             break;
         }
         checkNavigationState();
@@ -377,7 +397,7 @@ void TaskControllerNode::checkNavigationState() {
     }
 }
 
-void TaskControllerNode::startInitialPositionCalibration() {
+void TaskControllerNode::waitForPositionInitialisation() {
     if (!textToSpeech.hasStarted && !initPosition.hasStarted) {
         initPosition.start();
         std::string hint{"请确认机器人初始位置位于充电基站。"};
@@ -396,7 +416,8 @@ void TaskControllerNode::readyToPerformTasks() {
     }
     switch (getCurrentTask().getTaskType()) {
     case TaskType::Mapping:
-        throw UnsupportedTaskException{};
+        transferCurrentTaskStateTo(TaskState::WaitingForPositionInitialization);
+        break;
     case TaskType::Inspection:
         if (isCurrentTaskLegacy()) {
             taskState.taskResultPointer = std::make_unique<LegacyGeneralTask::Result>(getCurrentLegacyTask());
@@ -432,6 +453,9 @@ void TaskControllerNode::goToPharmacy() {
         } else if (navigation.hasEnded) {
             transferCurrentTaskStateTo(TaskState::DetectingMedicine);
             navigation.reset();
+        } else if (navigation.hasFailed) {
+            transferCurrentTaskStateTo(TaskState::WaypointUnreachable);
+            navigation.reset();
         }
     }
 }
@@ -443,6 +467,14 @@ void TaskControllerNode::detectMedicine() {
         medicineGrasp.medicinePosition = medicineDetection.medicinePosition;
         delegateObjectDetectionControl(ObjectDetectionControl::Stop);
         transferCurrentTaskStateTo(TaskState::GraspingMedicine);
+        medicineDetection.reset();
+    } else if (medicineDetection.hasFailed && medicineDetectionFailedTimes < 3) {
+        ++medicineDetectionFailedTimes;
+        transferCurrentTaskStateTo(TaskState::MedicineDetectionFailed);
+        medicineDetection.reset();
+    } else if (medicineDetection.hasFailed && medicineDetectionFailedTimes >= 3) {
+        medicineDetectionFailedTimes = 0;
+        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
         medicineDetection.reset();
     }
 }
@@ -661,10 +693,10 @@ void TaskControllerNode::speechRecognitionFailed() {
 
 void TaskControllerNode::giveUpCurrentTask() {
     if (!textToSpeech.hasStarted && !exceptionHandling.hasStarted) {
-        delegateTextToSpeech("重复出现异常。任务中断。");
+        delegateTextToSpeech("重复出现异常。任务中断。请勿接触机器人的机械臂。");
         exceptionHandling.start();
     } else if (textToSpeech.hasEnded && exceptionHandling.hasEnded) {
-        transferCurrentTaskStateTo(getPreviousTaskState());
+        transferCurrentTaskStateTo(TaskState::RetractingTheArm);
         textToSpeech.reset();
         exceptionHandling.reset();
     }
@@ -681,6 +713,7 @@ void TaskControllerNode::confirmPatientRequest() {
         if (confirmSpeechRecognition.foundYes) {
             transferCurrentTaskStateTo(TaskState::VideoCommunicating);
         } else {
+            taskState.inspectionTaskResult().calledDoctor = false;
             transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
         }
         confirmSpeechRecognition.reset();
@@ -694,6 +727,17 @@ void TaskControllerNode::videoCommunicating() {
     } else if (textToSpeech.hasEnded) {
         transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
         textToSpeech.reset();
+    }
+    if (!videoCall.hasStarted) {
+        delegateVideoCall();
+    } else if (videoCall.hasEnded) {
+        taskState.inspectionTaskResult().calledDoctor = true;
+        transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
+        videoCall.reset();
+    } else if (videoCall.hasFailed) {
+        taskState.inspectionTaskResult().calledDoctor = false;
+        transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
+        videoCall.reset();
     }
 }
 
@@ -774,7 +818,7 @@ void TaskControllerNode::measureTemperature() {
         }
         delegateTextToSpeech(stringContent.str());
     } else if (textToSpeech.hasEnded) {
-        if (temperatureMeasurement.temperature < Temperature{36.0, UnitTemperature::celcius}) {
+        if (temperatureMeasurement.temperature < Temperature{34.0, UnitTemperature::celcius}) {
             transferCurrentTaskStateTo(TaskState::AskingMeasuringTemperature);
             temperatureMeasurement.reset();
             temperatureMeasurement.isRemeasuring = true;
@@ -784,6 +828,28 @@ void TaskControllerNode::measureTemperature() {
             taskState.inspectionTaskResult().patientTemperature = temperatureMeasurement.temperature;
             temperatureMeasurement.reset();
         }
+        textToSpeech.reset();
+    }
+}
+
+void TaskControllerNode::medicineDetectionFailed() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("无法检测到药品，请尝试将药品摆放至机器人前方的桌面上，机器人会在 30 秒内重试。");
+    } else if (textToSpeech.hasEnded && !medicinePreparation.hasStarted) {
+        medicinePreparation.start();
+        nodeTiming.addTimedTask(30_s, [this]() { medicinePreparation.end(); }, "等待清除障碍物结束");
+    } else if (textToSpeech.hasEnded && medicinePreparation.hasEnded) {
+        transferCurrentTaskStateTo(getPreviousTaskState());
+        textToSpeech.reset();
+        medicinePreparation.reset();
+    }
+}
+
+void TaskControllerNode::videoCallFailed() {
+    if (!textToSpeech.hasStarted) {
+        delegateTextToSpeech("暂时无法实现视频通话，但您的需求已被记录。");
+    } else if (textToSpeech.hasEnded) {
+        transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
         textToSpeech.reset();
     }
 }
@@ -847,12 +913,18 @@ void TaskControllerNode::whenReceivedMedicineDetectionResult(ObjectDetectionResu
     if (!medicineDetection.hasStarted) {
         return;
     }
-    displayDetectedObjects(coordinates);
-    constexpr std::size_t nearest_object_index{0};
-    medicineDetection.medicinePosition = Coordinate{
-        coordinates->x[nearest_object_index], coordinates->y[nearest_object_index], coordinates->z[nearest_object_index]
-    };
-    medicineDetection.end();
+    if (!coordinates->x.empty()) {
+        displayDetectedObjects(coordinates);
+        constexpr std::size_t nearest_object_index{0};
+        medicineDetection.medicinePosition = Coordinate{
+            coordinates->x[nearest_object_index],
+            coordinates->y[nearest_object_index],
+            coordinates->z[nearest_object_index]
+        };
+        medicineDetection.end();
+    } else {
+        medicineDetection.fail();
+    }
 }
 
 void TaskControllerNode::whenReceivedNavigationResult(StringMessage::ConstPtr const& message) {
@@ -916,6 +988,17 @@ void TaskControllerNode::whenReceivedTemperatureMeasurementResult(Float64Message
     temperatureMeasurement.end();
 }
 
+void TaskControllerNode::whenReceivedVideoCallResult(StatusAndDescriptionMessage::ConstPtr const& result) {
+    if (!videoCall.hasStarted) {
+        return;
+    }
+    if (result->status == StatusAndDescriptionMessage::done) {
+        videoCall.end();
+    } else {
+        videoCall.fail();
+    }
+}
+
 void TaskControllerNode::delegateVelocityControl(LinearSpeed forward) {
     velocityControl.start();
     ROS_DEBUG("将前进速度设置为 %s。", forward.toString().c_str());
@@ -974,6 +1057,11 @@ void TaskControllerNode::delegateTemperatureMeasurement() {
     temperatureMeasurementRequestPublisher.publish(EmptyMessage{});
 }
 
+void TaskControllerNode::delegateVideoCall() {
+    videoCall.start();
+    videoCallRequestPublisher.publish(EmptyMessage{});
+}
+
 StringMessage TaskControllerNode::createWaypointMessage(std::string name) {
     StringMessage message{};
     message.data = std::move(name);
@@ -1020,8 +1108,8 @@ std::string TaskControllerNode::toString(ObjectDetectionControl behavior) {
 
 std::string TaskControllerNode::toString(TaskState taskState) {
     switch (taskState) {
-    case TaskState::CalibratingInitialPosition:
-        return "校准初始位置中";
+    case TaskState::WaitingForPositionInitialization:
+        return "等待校准初始位置";
     case TaskState::ReadyToPerformTasks:
         return "准备就绪";
     case TaskState::GoingToPharmacy:
@@ -1055,15 +1143,19 @@ std::string TaskControllerNode::toString(TaskState taskState) {
     case TaskState::ConfirmPatientRequest:
         return "确认患者语音";
     case TaskState::SpeechRecognitionFailed:
-        return "语音识别失败。";
+        return "语音识别失败";
     case TaskState::GiveUpCurrentTask:
         return "放弃当前任务";
     case TaskState::SpeakingPrescription:
         return "播放医嘱中";
     case TaskState::AskingIfGrabbedMedicine:
-        return "询问患者是由已抓取药品";
+        return "询问患者是否已准备好伸手取药";
     case TaskState::WaitingForGrabbingMedicine:
-        return "等待患者抓取药品";
+        return "等待患者伸手取药";
+    case TaskState::MedicineDetectionFailed:
+        return "药品检测失败";
+    case TaskState::VideoCallFailed:
+        return "视频通话失败";
     }
     return "";
 }

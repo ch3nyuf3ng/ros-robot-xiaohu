@@ -41,6 +41,8 @@ std::string const CommonConfigs::speechRecognitionRequestTopic{"speech_recogniti
 std::string const CommonConfigs::speechRecognitionResultTopic{"speech_recognition_result"};
 std::string const CommonConfigs::temperatureMeasurementRequestTopic{"temperature_measurement_request"};
 std::string const CommonConfigs::temperatureMeasurementResultTopic{"temperature_measurement_result"};
+std::string const CommonConfigs::videoCallRequestTopic{"video_call_request"};
+std::string const CommonConfigs::videoCallResultTopic{"video_call_result"};
 std::string const CommonConfigs::xfyunApiLoginParams{"appid = f897d917"};
 std::size_t const CommonConfigs::messageBufferSize{10};
 
