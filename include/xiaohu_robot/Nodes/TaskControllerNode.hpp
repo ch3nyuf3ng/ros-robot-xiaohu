@@ -49,6 +49,8 @@ public:
         std::string voiceRecognitionRequestTopic{CommonConfigs::speechRecognitionRequestTopic};
         std::string temperatureMeasurementRequestTopic{CommonConfigs::temperatureMeasurementRequestTopic};
         std::string temperatureMeasurementResultTopic{CommonConfigs::temperatureMeasurementResultTopic};
+        std::string videoCallingRequestTopic{CommonConfigs::videoCallingRequestTopic};
+        std::string videoCallingResultTopic{CommonConfigs::videoCallingResultTopic};
         NodeBasicConfigs nodeBasicConfig{};
     };
 
@@ -58,10 +60,11 @@ public:
 
 private:
     enum class TaskState {
-        CalibratingInitialPosition,
+        WaitingForPositionInitialization,
         ReadyToPerformTasks,
         GoingToPharmacy,
         DetectingMedicine,
+        MedicineDetectionFailed,
         GraspingMedicine,
         GoingToPatient,
         AskingMeasuringTemperature,
@@ -80,6 +83,7 @@ private:
         SpeechRecognitionFailed,
         WaypointUnreachable,
         GiveUpCurrentTask,
+        VideoCallFailed
     };
 
     enum class ObjectDetectionControl {
@@ -89,8 +93,8 @@ private:
 
     struct TaskStateContext final {
         std::unique_ptr<TaskResult> taskResultPointer{nullptr};
-        TaskState currentTaskState{TaskState::CalibratingInitialPosition};
-        TaskState previousTaskState{TaskState::CalibratingInitialPosition};
+        TaskState currentTaskState{TaskState::WaitingForPositionInitialization};
+        TaskState previousTaskState{TaskState::WaitingForPositionInitialization};
         bool stateTransferring{false};
 
         TaskResult& taskResult();
@@ -185,6 +189,8 @@ private:
     int speechRecognitionContinuousFailureTimes;
 
     MedicineDetectionAndGraspContext medicineDetection;
+    DelegationState medicinePreparation;
+    int medicineDetectionFailedTimes;
     Publisher const medicineDetectionRequestPublisher;
     Subscriber const medicineDetectionResultSubscriber;
 
@@ -195,6 +201,10 @@ private:
     TemperatureMeasurementContext temperatureMeasurement;
     Publisher const temperatureMeasurementRequestPublisher;
     Subscriber const temperatureMeasurementResultSubscriber;
+
+    DelegationState videoCall;
+    Publisher const videoCallRequestPublisher;
+    Subscriber const videoCallResultSubscriber;
 
     DelegationState waiting;
     DelegationState exceptionHandling;
@@ -213,7 +223,7 @@ private:
     void setPreviousTaskState(TaskState previousState);
     void checkNavigationState();
 
-    void startInitialPositionCalibration();
+    void waitForPositionInitialisation();
     void readyToPerformTasks();
     void goToPharmacy();
     void detectMedicine();
@@ -235,6 +245,8 @@ private:
     void speakPrescription();
     void askIfGrabbedMedicine();
     void waitForGrabbingMedicine();
+    void medicineDetectionFailed();
+    void videoCallFailed();
 
     void showRemainedTasksCount() const;
     void showTiming() const;
@@ -253,6 +265,7 @@ private:
     void whenReceivedTextToSpeechResult(StatusAndDescriptionMessage::ConstPtr const&);
     void whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessage::ConstPtr const&);
     void whenReceivedTemperatureMeasurementResult(Float64Message::ConstPtr const&);
+    void whenReceivedVideoCallResult(StatusAndDescriptionMessage::ConstPtr const&);
 
     void delegateVelocityControl(LinearSpeed forward);
     void delegateObjectDetectionControl(ObjectDetectionControl target);
@@ -262,6 +275,7 @@ private:
     void delegateTextToSpeech(std::string content);
     void delegateSpeechRecognition(Duration duration);
     void delegateTemperatureMeasurement();
+    void delegateVideoCall();
 
     static void displayDetectedObjects(ObjectDetectionResultMessasge::ConstPtr const& coordinates_ptr);
     static StringMessage createWaypointMessage(std::string name);

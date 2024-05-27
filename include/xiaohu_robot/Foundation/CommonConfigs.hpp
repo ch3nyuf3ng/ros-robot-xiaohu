@@ -45,6 +45,8 @@ struct CommonConfigs final {
     static std::string const speechRecognitionResultTopic;
     static std::string const temperatureMeasurementRequestTopic;
     static std::string const temperatureMeasurementResultTopic;
+    static std::string const videoCallRequestTopic;
+    static std::string const videoCallResultTopic;
     static std::string const xfyunApiLoginParams;
     static std::size_t const messageBufferSize;
     static std::string const& packagePath();
