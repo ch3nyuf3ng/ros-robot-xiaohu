@@ -400,7 +400,7 @@ void TaskControllerNode::checkNavigationState() {
 void TaskControllerNode::waitForPositionInitialisation() {
     if (!textToSpeech.hasStarted && !initPosition.hasStarted) {
         initPosition.start();
-        std::string hint{"请确认机器人初始位置位于充电基站。"};
+        std::string hint{"等待机器人位置初始化中。请确认初始化位置位于充电基站。"};
         ROS_INFO("%s", hint.c_str());
         delegateTextToSpeech(hint);
     } else if (textToSpeech.hasEnded && initPosition.hasEnded) {

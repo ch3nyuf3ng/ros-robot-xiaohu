@@ -1,4 +1,5 @@
-rostopic pub -1 /xiaohu_robot/init_position_request geometry_msgs/Pose \
+rostopic pub -1 /xiaohu_robot/init_position_request \
+geometry_msgs/Pose \
 '{position: {x: -0.0270498, y: -3.37887, z: 0}, orientation: {x: 0, y: 0, z: 0.706908, w: 0.707306}}'
 
 rostopic pub -1 /xiaohu_robot/inspection_task_request \
