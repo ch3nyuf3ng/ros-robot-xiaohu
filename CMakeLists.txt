@@ -131,6 +131,7 @@ catkin_package(
     sensor_msgs
     geometry_msgs
     std_msgs
+    nav_msgs
     message_runtime
     waterplus_map_tools
     wpb_home_behaviors
@@ -278,6 +279,26 @@ target_link_libraries(${PROJECT_NAME}_temperature_measurement_node
 set_target_properties(${PROJECT_NAME}_temperature_measurement_node
   PROPERTIES
     OUTPUT_NAME temperature_measurement_node
+    PREFIX ""
+)
+
+add_executable(${PROJECT_NAME}_map_service_node
+  src/${PROJECT_NAME}/Nodes/MapServiceNode.cpp
+)
+
+add_dependencies(${PROJECT_NAME}_map_service_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(${PROJECT_NAME}_map_service_node
+  ${PROJECT_NAME}_foundation
+  ${catkin_LIBRARIES}
+)
+
+set_target_properties(${PROJECT_NAME}_map_service_node
+  PROPERTIES
+    OUTPUT_NAME map_service_node
     PREFIX ""
 )
 

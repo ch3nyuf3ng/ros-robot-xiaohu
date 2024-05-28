@@ -7,8 +7,10 @@
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include "xiaohu_robot/Foundation/VelocityCommand.hpp"
 #include <clocale>
+#include <cstdlib>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <utility>
@@ -106,7 +108,9 @@ TaskControllerNode::TaskControllerNode(Configs configs):
         &TaskControllerNode::whenReceivedNavigationResult,
         this
     )},
-    waypointUnreachableTimes{0},
+    navigationThread{},
+    clearCostmapsClient{nodeHandle.serviceClient<std_srvs::Empty>(configs.clearCostmapsTopic)},
+    navigationFailedTimes{0},
     obstacleClearing{},
     navigation{},
     navigationClient{configs.coordinateNavigationTopic},
@@ -130,7 +134,7 @@ TaskControllerNode::TaskControllerNode(Configs configs):
         &TaskControllerNode::whenReceivedSpeechRecognitionResult,
         this
     )},
-    speechRecognitionContinuousFailureTimes{0},
+    speechRecognitionFailedTimes{0},
     medicineDetection{},
     medicinePreparation{},
     medicineDetectionFailedTimes{0},
@@ -164,9 +168,9 @@ TaskControllerNode::TaskControllerNode(Configs configs):
         this
     )},
     videoCall{},
-    videoCallRequestPublisher{nodeHandle.advertise<EmptyMessage>(
-        configs.videoCallingRequestTopic, configs.nodeBasicConfig.messageBufferSize
-    )},
+    videoCallRequestPublisher{
+        nodeHandle.advertise<EmptyMessage>(configs.videoCallingRequestTopic, configs.nodeBasicConfig.messageBufferSize)
+    },
     videoCallResultSubscriber{nodeHandle.subscribe<StatusAndDescriptionMessage>(
         configs.videoCallingResultTopic,
         configs.nodeBasicConfig.messageBufferSize,
@@ -359,6 +363,15 @@ TaskControllerNode::TaskState TaskControllerNode::getPreviousTaskState() const {
     return taskState.previousTaskState;
 }
 
+void TaskControllerNode::clearCostmaps() {
+    Procedure clearCostmapsService{};
+    if (!clearCostmapsClient.call(clearCostmapsService)) {
+        ROS_ERROR("清理代价地图失败。");
+    } else {
+        ROS_INFO("清理代价地图成功。");
+    }
+}
+
 void TaskControllerNode::transferCurrentTaskStateTo(TaskState next) {
     taskState.previousTaskState = taskState.currentTaskState;
     taskState.currentTaskState = next;
@@ -398,16 +411,45 @@ void TaskControllerNode::checkNavigationState() {
 }
 
 void TaskControllerNode::waitForPositionInitialisation() {
+    if (navigationThread.joinable()) {
+        throw std::runtime_error("等待位置初始化的时候不能启动导航。");
+    }
     if (!textToSpeech.hasStarted && !initPosition.hasStarted) {
         initPosition.start();
         std::string hint{"等待机器人位置初始化中。请确认初始化位置位于充电基站。"};
         ROS_INFO("%s", hint.c_str());
         delegateTextToSpeech(hint);
     } else if (textToSpeech.hasEnded && initPosition.hasEnded) {
+        startNavigationNodes();
         transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
         textToSpeech.reset();
         initPosition.reset();
     }
+}
+
+void TaskControllerNode::startNavigationNodes() {
+    if (navigationThread.joinable()) {
+        throw std::runtime_error("在调用该方法之前导航节点线程已运行。");
+    }
+    navigationThread = std::thread([this](){
+        std::ostringstream command;
+        command << "roslaunch " << configs.nodeBasicConfig.nodeNamespace << " navigation.launch &";
+        int error{std::system(command.str().c_str())};
+        if (error) {
+            ROS_ERROR("导航节点关闭失败。返回值：%d", error);
+        }
+    });
+}
+
+void TaskControllerNode::stopNavigationNodes() {
+    if (!navigationThread.joinable()) {
+        throw std::runtime_error("在调用该方法之前导航节点线程未运行。");
+    }
+    int error{std::system("rosnode kill amcl move_base")};
+    if (error) {
+        ROS_ERROR("导航节点关闭失败。返回值：%d", error);
+    }
+    navigationThread.join();
 }
 
 void TaskControllerNode::readyToPerformTasks() {
@@ -416,6 +458,7 @@ void TaskControllerNode::readyToPerformTasks() {
     }
     switch (getCurrentTask().getTaskType()) {
     case TaskType::Mapping:
+        stopNavigationNodes();
         transferCurrentTaskStateTo(TaskState::WaitingForPositionInitialization);
         break;
     case TaskType::Inspection:
@@ -468,13 +511,8 @@ void TaskControllerNode::detectMedicine() {
         delegateObjectDetectionControl(ObjectDetectionControl::Stop);
         transferCurrentTaskStateTo(TaskState::GraspingMedicine);
         medicineDetection.reset();
-    } else if (medicineDetection.hasFailed && medicineDetectionFailedTimes < 3) {
-        ++medicineDetectionFailedTimes;
+    } else if (medicineDetection.hasFailed) {
         transferCurrentTaskStateTo(TaskState::MedicineDetectionFailed);
-        medicineDetection.reset();
-    } else if (medicineDetection.hasFailed && medicineDetectionFailedTimes >= 3) {
-        medicineDetectionFailedTimes = 0;
-        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
         medicineDetection.reset();
     }
 }
@@ -569,7 +607,7 @@ void TaskControllerNode::askIfGrabbedMedicine() {
         } else {
             transferCurrentTaskStateTo(TaskState::WaitingForGrabbingMedicine);
         }
-        speechRecognitionContinuousFailureTimes = 0;
+        speechRecognitionFailedTimes = 0;
         textToSpeech.reset();
         speechReognition.reset();
     } else if (textToSpeech.hasEnded && speechReognition.hasFailed) {
@@ -671,7 +709,7 @@ void TaskControllerNode::askIfVideoNeeded() {
     } else if (speechReognition.hasEnded) {
         transferCurrentTaskStateTo(TaskState::ConfirmPatientRequest);
         confirmSpeechRecognition = speechReognition;
-        speechRecognitionContinuousFailureTimes = 0;
+        speechRecognitionFailedTimes = 0;
         speechReognition.reset();
         textToSpeech.reset();
     }
@@ -680,9 +718,10 @@ void TaskControllerNode::askIfVideoNeeded() {
 void TaskControllerNode::speechRecognitionFailed() {
     if (!textToSpeech.hasStarted) {
         delegateTextToSpeech("抱歉，我没有听清，请再试一次。您可以说“是”，或者“否”。");
-        speechRecognitionContinuousFailureTimes++;
+        speechRecognitionFailedTimes++;
+        ROS_WARN("当前连续失败次数：%d", speechRecognitionFailedTimes);
     } else if (textToSpeech.hasEnded) {
-        if (speechRecognitionContinuousFailureTimes < 3) {
+        if (speechRecognitionFailedTimes < 3) {
             transferCurrentTaskStateTo(getPreviousTaskState());
         } else {
             transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
@@ -773,6 +812,10 @@ void TaskControllerNode::goToBaseStation() {
 }
 
 void TaskControllerNode::waypointUnreachable() {
+    if (navigationFailedTimes > 3) {
+        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
+        ROS_ERROR("连续航点不可达 3 次，放弃当前任务。");
+    }
     if (!textToSpeech.hasStarted) {
         delegateTextToSpeech("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
     } else if (textToSpeech.hasEnded && !obstacleClearing.hasStarted) {
@@ -833,6 +876,11 @@ void TaskControllerNode::measureTemperature() {
 }
 
 void TaskControllerNode::medicineDetectionFailed() {
+    if (medicineDetectionFailedTimes > 3) {
+        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
+        medicineDetectionFailedTimes = 0;
+    }
+    ++medicineDetectionFailedTimes;
     if (!textToSpeech.hasStarted) {
         delegateTextToSpeech("无法检测到药品，请尝试将药品摆放至机器人前方的桌面上，机器人会在 30 秒内重试。");
     } else if (textToSpeech.hasEnded && !medicinePreparation.hasStarted) {

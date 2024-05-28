@@ -20,8 +20,9 @@ public:
     };
 
     struct RandomTemperature final {
-        std::default_random_engine generator{};
-        std::uniform_real_distribution<double> distribution{36.0, 42.0};
+        std::random_device randomDevice{};
+        std::default_random_engine generator{randomDevice()};
+        std::uniform_real_distribution<double> distribution{36.0, 40.0};
 
         double getValue();
     };

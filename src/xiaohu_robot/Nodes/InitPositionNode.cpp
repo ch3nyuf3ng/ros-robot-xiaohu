@@ -1,5 +1,4 @@
 #include "xiaohu_robot/Nodes/InitPositionNode.hpp"
-#include "ros/console.h"
 #include "ros/init.h"
 #include "ros/time.h"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
@@ -33,8 +32,7 @@ InitPositionNode::InitPositionNode(Configs configs):
     )},
     amclInitPositionRequestTopicPublisher{nodeHandle.advertise<CoordinateCovarianceStampedMessage>(
         configs.amclInitPositionRequestTopic, configs.nodeBasicConfigs.messageBufferSize
-    )},
-    clearCostmapsClient{nodeHandle.serviceClient<std_srvs::Empty>(configs.clearCostmapsTopic)} {
+    )} {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     std::cout << "初始位置设置节点已启动。" << std::endl;
 }
@@ -55,16 +53,7 @@ void InitPositionNode::whenReceivedInitPositionRequest(CoordinateMessage::ConstP
     amclInitPositionRequestTopicPublisher.publish(amclInitPositionRequest);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     StatusAndDescriptionMessage result;
-    Procedure clearCostmapsService{};
-    if (!clearCostmapsClient.call(clearCostmapsService)) {
-        result.status = StatusAndDescriptionMessage::failed;
-        result.description = "清理代价地图失败。";
-        ROS_ERROR("%s", result.description.c_str());
-    } else {
-        result.status = StatusAndDescriptionMessage::done;
-        result.description = "设置初始位置成功。";
-        ROS_INFO("%s", result.description.c_str());
-    }
+    result.status = StatusAndDescriptionMessage::done;
     initPositionResultPublisher.publish<StatusAndDescriptionMessage>(result);
 }
 }  // namespace Nodes

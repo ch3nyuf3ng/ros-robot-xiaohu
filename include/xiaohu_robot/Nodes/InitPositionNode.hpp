@@ -15,7 +15,6 @@ public:
         std::string initPositionRequestTopic{CommonConfigs::initPositionRequestTopic};
         std::string initPositionResultTopic{CommonConfigs::initPositionResultTopic};
         std::string amclInitPositionRequestTopic{CommonConfigs::amclInitPositionRequestTopic};
-        std::string clearCostmapsTopic{CommonConfigs::clearCostmapsTopic};
         NodeBasicConfigs nodeBasicConfigs{};
     };
 
@@ -28,7 +27,7 @@ private:
     Subscriber const initPositionRequestSubscriber;
     Publisher const initPositionResultPublisher;
     Publisher const amclInitPositionRequestTopicPublisher;
-    ServiceClient clearCostmapsClient;
+    
     Configs configs;
 
     void whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const&);

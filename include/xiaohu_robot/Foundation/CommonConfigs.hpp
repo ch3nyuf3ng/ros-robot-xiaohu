@@ -21,6 +21,7 @@ struct CommonConfigs final {
     static std::string const inspectionTaskResultTopic;
     static std::string const mappingTaskRequestTopic;
     static std::string const mappingTaskResultTopic;
+    static std::string const mapSavingRequestTopic;
     static std::string const initPositionRequestTopic;
     static std::string const initPositionResultTopic;
     static std::string const videoCallingRequestTopic;
@@ -28,6 +29,7 @@ struct CommonConfigs final {
     static std::string const continueProcedureRequestTopic;
     static std::string const continueProcedureResultTopic;
     static std::string const joystickResultTopic;
+    static std::string const gmappingGetMapTopic;
     static std::string const amclInitPositionRequestTopic;
     static std::string const coordinateNavigationTopic;
     static std::string const clearCostmapsTopic;
@@ -45,6 +47,9 @@ struct CommonConfigs final {
     static std::string const speechRecognitionResultTopic;
     static std::string const temperatureMeasurementRequestTopic;
     static std::string const temperatureMeasurementResultTopic;
+    static std::string const gmappingStartRequestTopic;
+    static std::string const gmappingStopRequestTopic;
+    static std::string const globalMapTopic;
     static std::string const videoCallRequestTopic;
     static std::string const videoCallResultTopic;
     static std::string const xfyunApiLoginParams;

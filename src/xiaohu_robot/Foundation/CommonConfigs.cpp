@@ -15,6 +15,7 @@ std::string const CommonConfigs::inspectionTaskRequestTopic{"inspection_task_req
 std::string const CommonConfigs::inspectionTaskResultTopic{"inspection_task_result"};
 std::string const CommonConfigs::mappingTaskRequestTopic{"mapping_task_request"};
 std::string const CommonConfigs::mappingTaskResultTopic{"mapping_task_result"};
+std::string const CommonConfigs::mapSavingRequestTopic{"map_saving_request"};
 std::string const CommonConfigs::medicineDeliveryTaskRequestTopic{"medicine_delivery_task_request"};
 std::string const CommonConfigs::medicineDeliveryTaskResultTopic{"medicine_delivery_task_result"};
 std::string const CommonConfigs::initPositionRequestTopic{"init_position_request"};
@@ -24,6 +25,7 @@ std::string const CommonConfigs::videoCallingResultTopic{"viedo_call_result"};
 std::string const CommonConfigs::continueProcedureRequestTopic{"continue_request"};
 std::string const CommonConfigs::continueProcedureResultTopic{"continue_result"};
 std::string const CommonConfigs::joystickResultTopic{"/joy"};
+std::string const CommonConfigs::gmappingGetMapTopic{"/dynamic_map"};
 std::string const CommonConfigs::amclInitPositionRequestTopic{"/initialpose"};
 std::string const CommonConfigs::coordinateNavigationTopic{"/move_base"};
 std::string const CommonConfigs::clearCostmapsTopic{coordinateNavigationTopic + "/clear_costmaps"};
@@ -41,6 +43,9 @@ std::string const CommonConfigs::speechRecognitionRequestTopic{"speech_recogniti
 std::string const CommonConfigs::speechRecognitionResultTopic{"speech_recognition_result"};
 std::string const CommonConfigs::temperatureMeasurementRequestTopic{"temperature_measurement_request"};
 std::string const CommonConfigs::temperatureMeasurementResultTopic{"temperature_measurement_result"};
+std::string const CommonConfigs::gmappingStartRequestTopic{"gmapping_start_request"};
+std::string const CommonConfigs::gmappingStopRequestTopic{"gmapping_stop_request"};
+std::string const CommonConfigs::globalMapTopic{"/map"};
 std::string const CommonConfigs::videoCallRequestTopic{"video_call_request"};
 std::string const CommonConfigs::videoCallResultTopic{"video_call_result"};
 std::string const CommonConfigs::xfyunApiLoginParams{"appid = f897d917"};

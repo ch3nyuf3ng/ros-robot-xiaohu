@@ -1,7 +1,6 @@
 #pragma once
 
-#include <boost/any.hpp>
-#include <memory>
+#include <thread>
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
 
@@ -13,6 +12,7 @@
 #include "xiaohu_robot/Foundation/Task.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <deque>
+#include <memory>
 #include <string>
 
 namespace xiaohu_robot {
@@ -21,6 +21,7 @@ class TaskControllerNode final: public Runnable {
 public:
     struct Configs final {
         std::string baseStationName{CommonConfigs::baseStationName};
+        std::string clearCostmapsTopic{CommonConfigs::clearCostmapsTopic};
         std::string currentTaskStateRequestTopic{CommonConfigs::currentTaskStateRequestTopic};
         std::string currentTaskStateResultTopic{CommonConfigs::currentTaskStateResultTopic};
         std::string legacyGeneralTasksRequestTopic{CommonConfigs::legacyGeneralTasksRequestTopic};
@@ -172,8 +173,10 @@ private:
     DelegationState waypointNavigation;
     Publisher const waypointNavigationRequestPublisher;
     Subscriber const waypointNavigationResultSubscriber;
-    int waypointUnreachableTimes;
+    int navigationFailedTimes;
 
+    std::thread navigationThread;
+    ServiceClient clearCostmapsClient;
     DelegationState obstacleClearing;
     DelegationState navigation;
     NavigationClient navigationClient;
@@ -186,7 +189,7 @@ private:
     SpeechRecognitionContext confirmSpeechRecognition;
     Publisher const speechRecognitionRequestPublisher;
     Subscriber const speechRecognitionResultSubscriber;
-    int speechRecognitionContinuousFailureTimes;
+    int speechRecognitionFailedTimes;
 
     MedicineDetectionAndGraspContext medicineDetection;
     DelegationState medicinePreparation;
@@ -222,8 +225,11 @@ private:
     void transferCurrentTaskStateTo(TaskState nextState);
     void setPreviousTaskState(TaskState previousState);
     void checkNavigationState();
+    void clearCostmaps();
 
     void waitForPositionInitialisation();
+    void startNavigationNodes();
+    void stopNavigationNodes();
     void readyToPerformTasks();
     void goToPharmacy();
     void detectMedicine();
