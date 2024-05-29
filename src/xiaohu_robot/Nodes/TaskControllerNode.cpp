@@ -37,11 +37,11 @@ TaskControllerNode::TaskControllerNode(Configs configs):
         &TaskControllerNode::whenReceivedInitPositionRequest,
         this
     )},
-    initPositionResultSubscriber{nodeHandle.subscribe<StatusAndDescriptionMessage>(
-        configs.initPositionResultTopic,
-        configs.nodeBasicConfig.messageBufferSize,
-        &TaskControllerNode::whenReceivedInitPositionResult,
-        this
+    initPositionResultPublisher{nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.initPositionResultTopic, configs.nodeBasicConfig.messageBufferSize
+    )},
+    amclInitPositionRequestTopicPublisher{nodeHandle.advertise<CoordinateCovarianceStampedMessage>(
+        configs.amclInitPositionRequestTopic, configs.nodeBasicConfig.messageBufferSize
     )},
     taskState{},
     tasks{},
@@ -185,6 +185,9 @@ TaskControllerNode::TaskControllerNode(Configs configs):
 }
 
 TaskControllerNode::~TaskControllerNode() {
+    if (navigationThread.joinable()) {
+        stopNavigationNodes();
+    }
     std::cout << "任务控制器已退出。" << std::endl;
 }
 
@@ -367,6 +370,7 @@ void TaskControllerNode::clearCostmaps() {
     Procedure clearCostmapsService{};
     if (!clearCostmapsClient.call(clearCostmapsService)) {
         ROS_ERROR("清理代价地图失败。");
+        throw std::runtime_error("清理代价地图失败。");
     } else {
         ROS_INFO("清理代价地图成功。");
     }
@@ -411,16 +415,15 @@ void TaskControllerNode::checkNavigationState() {
 }
 
 void TaskControllerNode::waitForPositionInitialisation() {
-    if (navigationThread.joinable()) {
-        throw std::runtime_error("等待位置初始化的时候不能启动导航。");
-    }
     if (!textToSpeech.hasStarted && !initPosition.hasStarted) {
         initPosition.start();
         std::string hint{"等待机器人位置初始化中。请确认初始化位置位于充电基站。"};
         ROS_INFO("%s", hint.c_str());
         delegateTextToSpeech(hint);
     } else if (textToSpeech.hasEnded && initPosition.hasEnded) {
-        startNavigationNodes();
+        // if (!tasks.empty() && getCurrentTask().getTaskType() == TaskType::Mapping) {
+
+        // }
         transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
         textToSpeech.reset();
         initPosition.reset();
@@ -948,17 +951,24 @@ void TaskControllerNode::whenReceivedCurrentTaskStateRequest(EmptyMessage::Const
 
 void TaskControllerNode::whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const& message) {
     baseStatePosition = Coordinate{message};
+    CoordinateMessage messageCopy{*message};
+    startNavigationNodes();
+    ROS_INFO(" 启动导航服务中。");
+    nodeTiming.addTimedTask(
+        8_s,
+        [this, messageCopy]() {
+            CoordinateCovarianceStampedMessage amclInitPositionRequest;
+            amclInitPositionRequest.header.frame_id = "map";
+            amclInitPositionRequest.header.stamp = ros::Time::now();
+            amclInitPositionRequest.pose.pose = messageCopy;
+            amclInitPositionRequestTopicPublisher.publish(amclInitPositionRequest);
+        },
+        "校准初始位置中"
+    );
+    nodeTiming.addTimedTask(9_s, [this]() { clearCostmaps(); }, "清除代价地图中");
+    nodeTiming.addTimedTask(10_s, [this]() { initPosition.end(); }, "坐标初始化完成");
     ROS_INFO("充电基站坐标已初始化。");
     std::cout << baseStatePosition.toString() << std::endl;
-}
-
-void TaskControllerNode::whenReceivedInitPositionResult(StatusAndDescriptionMessage::ConstPtr const& result) {
-    if (!initPosition.hasStarted) {
-        return;
-    }
-    if (result->status == StatusAndDescriptionMessage::done) {
-        initPosition.end();
-    }
 }
 
 void TaskControllerNode::whenReceivedMappingTaskRequest(MappingTaskRequestMessage::ConstPtr const& message) {

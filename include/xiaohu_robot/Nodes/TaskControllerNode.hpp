@@ -21,6 +21,7 @@ class TaskControllerNode final: public Runnable {
 public:
     struct Configs final {
         std::string baseStationName{CommonConfigs::baseStationName};
+        std::string amclInitPositionRequestTopic{CommonConfigs::amclInitPositionRequestTopic};
         std::string clearCostmapsTopic{CommonConfigs::clearCostmapsTopic};
         std::string currentTaskStateRequestTopic{CommonConfigs::currentTaskStateRequestTopic};
         std::string currentTaskStateResultTopic{CommonConfigs::currentTaskStateResultTopic};
@@ -149,7 +150,8 @@ private:
     DelegationState initPosition;
     Coordinate baseStatePosition;
     Subscriber const initPositionRequestSubscriber;
-    Subscriber const initPositionResultSubscriber;
+    Publisher const initPositionResultPublisher;
+    Publisher const amclInitPositionRequestTopicPublisher;
 
     TaskStateContext taskState;
     std::deque<std::unique_ptr<Task>> tasks;
@@ -260,7 +262,6 @@ private:
 
     void whenReceivedCurrentTaskStateRequest(EmptyMessage::ConstPtr const&);
     void whenReceivedInitPositionRequest(CoordinateMessage::ConstPtr const&);
-    void whenReceivedInitPositionResult(StatusAndDescriptionMessage::ConstPtr const&);
     void whenReceivedMappingTaskRequest(MappingTaskRequestMessage::ConstPtr const&);
     void whenReceivedInspectionTaskRequest(InspectionTaskRequestMessage::ConstPtr const&);
     void whenReceivedMedicineDeliveryTaskRequest(MedicineDeliveryTaskRequestMessage::ConstPtr const&);
