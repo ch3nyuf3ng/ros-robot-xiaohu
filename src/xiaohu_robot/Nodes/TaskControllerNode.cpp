@@ -1102,6 +1102,13 @@ void TaskControllerNode::delegateObjectDetectionControl(ObjectDetectionControl b
     switch (behavior) {
     case ObjectDetectionControl::Start:
         medicineDetection.start();
+        nodeTiming.addTimedTask(3_s, [this](){
+            if (medicineDetection.hasStarted && !medicineDetection.hasEnded && !medicineDetection.hasFailed) {
+                delegateObjectDetectionControl(ObjectDetectionControl::Stop);
+                ROS_ERROR("药品检测超时。");
+                medicineDetection.fail();
+            }
+        }, "药品检测超时");
         break;
     case ObjectDetectionControl::Stop:
         medicineDetection.end();
