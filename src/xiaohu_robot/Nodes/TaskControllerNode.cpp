@@ -421,9 +421,12 @@ void TaskControllerNode::waitForPositionInitialisation() {
         ROS_INFO("%s", hint.c_str());
         delegateTextToSpeech(hint);
     } else if (textToSpeech.hasEnded && initPosition.hasEnded) {
-        // if (!tasks.empty() && getCurrentTask().getTaskType() == TaskType::Mapping) {
-
-        // }
+        if (!tasks.empty() && getCurrentTask().getTaskType() == TaskType::Mapping) {
+            taskState.mappingTaskResult().taskStatus = TaskStatus::Done;
+            mappingTaskResultPublisher.publish(taskState.mappingTaskResult().toMessage());
+            taskState.taskResultPointer = nullptr;
+            tasks.pop_front();
+        }
         transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
         textToSpeech.reset();
         initPosition.reset();
