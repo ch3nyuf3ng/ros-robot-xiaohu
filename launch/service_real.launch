@@ -1,11 +1,13 @@
 <launch>
     <group ns="xiaohu_robot">
-        <param name="real_temperature" value="true"/>
+        <param name="real_temperature" value="true" />
     </group>
     <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
     <include file="$(find xiaohu_robot)/manipulator/manipulator_real.launch" />
     <include file="$(find xiaohu_robot)/rviz/rviz.launch" />
-    <include file="$(find xiaohu_robot)/lidar/rplidar.launch" />
+    <node pkg="wpb_home_bringup" type="wpb_home_lidar_filter" name="wpb_home_lidar_filter">
+        <param name="pub_topic" value="/scan" />
+    </node>
     <include file="$(find xiaohu_robot)/lidar/filter.launch" />
     <include file="$(find xiaohu_robot)/functions/object_detect.launch" />
     <include file="$(find xiaohu_robot)/functions/object_grab.launch" />
