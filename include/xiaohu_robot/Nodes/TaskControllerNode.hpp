@@ -192,7 +192,7 @@ private:
     int speechRecognitionFailedTimes;
 
     MedicineDetectionAndGraspContext medicineDetection;
-    DelegationState medicinePreparation;
+    DelegationState waitingForMedicinePreparation;
     int medicineDetectionFailedTimes;
     Publisher const medicineDetectionRequestPublisher;
     Subscriber const medicineDetectionResultSubscriber;

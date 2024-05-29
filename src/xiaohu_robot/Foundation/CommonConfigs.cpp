@@ -7,8 +7,11 @@ namespace xiaohu_robot {
 inline namespace Foundation {
 std::string const CommonConfigs::baseStationName{"base"};
 std::string const CommonConfigs::xiaohuRobotNamespace{"xiaohu_robot"};
+std::string const CommonConfigs::baseLinkTopic{"/base_link"};
 std::string const CommonConfigs::currentTaskStateRequestTopic{"current_task_state_request"};
 std::string const CommonConfigs::currentTaskStateResultTopic{"current_task_state_result"};
+std::string const CommonConfigs::currentPositionRequestTopic{"current_position_request"};
+std::string const CommonConfigs::currentPositionResultTopic{"current_position_result"};
 std::string const CommonConfigs::legacyGeneralTasksRequestTopic{"legacy_tasks_request"};
 std::string const CommonConfigs::legacyGeneralTasksResultTopic{"legacy_tasks_result"};
 std::string const CommonConfigs::inspectionTaskRequestTopic{"inspection_task_request"};
@@ -16,6 +19,7 @@ std::string const CommonConfigs::inspectionTaskResultTopic{"inspection_task_resu
 std::string const CommonConfigs::mappingTaskRequestTopic{"mapping_task_request"};
 std::string const CommonConfigs::mappingTaskResultTopic{"mapping_task_result"};
 std::string const CommonConfigs::mapSavingRequestTopic{"map_saving_request"};
+std::string const CommonConfigs::mapSavingResultTopic{"map_saving_result"};
 std::string const CommonConfigs::medicineDeliveryTaskRequestTopic{"medicine_delivery_task_request"};
 std::string const CommonConfigs::medicineDeliveryTaskResultTopic{"medicine_delivery_task_result"};
 std::string const CommonConfigs::initPositionRequestTopic{"init_position_request"};
@@ -44,7 +48,9 @@ std::string const CommonConfigs::speechRecognitionResultTopic{"speech_recognitio
 std::string const CommonConfigs::temperatureMeasurementRequestTopic{"temperature_measurement_request"};
 std::string const CommonConfigs::temperatureMeasurementResultTopic{"temperature_measurement_result"};
 std::string const CommonConfigs::gmappingStartRequestTopic{"gmapping_start_request"};
+std::string const CommonConfigs::gmappingStartResultTopic{"gmapping_start_result"};
 std::string const CommonConfigs::gmappingStopRequestTopic{"gmapping_stop_request"};
+std::string const CommonConfigs::gmappingStopResultTopic{"gmapping_stop_result"};
 std::string const CommonConfigs::globalMapTopic{"/map"};
 std::string const CommonConfigs::videoCallRequestTopic{"video_call_request"};
 std::string const CommonConfigs::videoCallResultTopic{"video_call_result"};

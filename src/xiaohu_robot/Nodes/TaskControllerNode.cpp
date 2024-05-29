@@ -136,7 +136,7 @@ TaskControllerNode::TaskControllerNode(Configs configs):
     )},
     speechRecognitionFailedTimes{0},
     medicineDetection{},
-    medicinePreparation{},
+    waitingForMedicinePreparation{},
     medicineDetectionFailedTimes{0},
     medicineDetectionRequestPublisher{nodeHandle.advertise<StringMessage>(
         configs.medcineDetectionRequestTopic, configs.nodeBasicConfig.messageBufferSize
@@ -431,7 +431,7 @@ void TaskControllerNode::startNavigationNodes() {
     if (navigationThread.joinable()) {
         throw std::runtime_error("在调用该方法之前导航节点线程已运行。");
     }
-    navigationThread = std::thread([this](){
+    navigationThread = std::thread([this]() {
         std::ostringstream command;
         command << "roslaunch " << configs.nodeBasicConfig.nodeNamespace << " navigation.launch &";
         int error{std::system(command.str().c_str())};
@@ -717,16 +717,21 @@ void TaskControllerNode::askIfVideoNeeded() {
 
 void TaskControllerNode::speechRecognitionFailed() {
     if (!textToSpeech.hasStarted) {
-        delegateTextToSpeech("抱歉，我没有听清，请再试一次。您可以说“是”，或者“否”。");
-        speechRecognitionFailedTimes++;
-        ROS_WARN("当前连续失败次数：%d", speechRecognitionFailedTimes);
+        if (speechRecognitionFailedTimes < 3) {
+            delegateTextToSpeech("抱歉，我没有听清，请再试一次。您可以说“是”，或者“否”。");
+        } else {
+            delegateTextToSpeech("语音检测连续失败 3 次，已放弃当前任务。");
+        }
     } else if (textToSpeech.hasEnded) {
         if (speechRecognitionFailedTimes < 3) {
             transferCurrentTaskStateTo(getPreviousTaskState());
+            speechRecognitionFailedTimes++;
+            textToSpeech.reset();
         } else {
             transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
+            speechRecognitionFailedTimes = 0;
+            textToSpeech.reset();
         }
-        textToSpeech.reset();
     }
 }
 
@@ -812,19 +817,28 @@ void TaskControllerNode::goToBaseStation() {
 }
 
 void TaskControllerNode::waypointUnreachable() {
-    if (navigationFailedTimes > 3) {
-        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
-        ROS_ERROR("连续航点不可达 3 次，放弃当前任务。");
-    }
     if (!textToSpeech.hasStarted) {
-        delegateTextToSpeech("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
-    } else if (textToSpeech.hasEnded && !obstacleClearing.hasStarted) {
-        obstacleClearing.start();
-        nodeTiming.addTimedTask(20_s, [this]() { obstacleClearing.end(); }, "等待清除障碍物结束");
-    } else if (textToSpeech.hasEnded && obstacleClearing.hasEnded) {
-        transferCurrentTaskStateTo(getPreviousTaskState());
-        textToSpeech.reset();
-        obstacleClearing.reset();
+        if (navigationFailedTimes < 3) {
+            delegateTextToSpeech("无法前往下一处航点，请尝试移除周围的障碍物，机器人会在 20 秒内重试。");
+        } else {
+            delegateTextToSpeech("导航连续失败 3 次，已放弃本次任务。");
+        }
+    } else if (textToSpeech.hasEnded) {
+        if (navigationFailedTimes < 3) {
+            if (!obstacleClearing.hasStarted) {
+                obstacleClearing.start();
+                nodeTiming.addTimedTask(20_s, [this]() { obstacleClearing.end(); }, "等待清除障碍物结束");
+            } else if (obstacleClearing.hasEnded) {
+                transferCurrentTaskStateTo(getPreviousTaskState());
+                navigationFailedTimes++;
+                obstacleClearing.reset();
+                textToSpeech.reset();
+            }
+        } else {
+            transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
+            navigationFailedTimes = 0;
+            textToSpeech.reset();
+        }
     }
 }
 
@@ -876,20 +890,28 @@ void TaskControllerNode::measureTemperature() {
 }
 
 void TaskControllerNode::medicineDetectionFailed() {
-    if (medicineDetectionFailedTimes > 3) {
-        transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
-        medicineDetectionFailedTimes = 0;
-    }
-    ++medicineDetectionFailedTimes;
     if (!textToSpeech.hasStarted) {
-        delegateTextToSpeech("无法检测到药品，请尝试将药品摆放至机器人前方的桌面上，机器人会在 30 秒内重试。");
-    } else if (textToSpeech.hasEnded && !medicinePreparation.hasStarted) {
-        medicinePreparation.start();
-        nodeTiming.addTimedTask(30_s, [this]() { medicinePreparation.end(); }, "等待清除障碍物结束");
-    } else if (textToSpeech.hasEnded && medicinePreparation.hasEnded) {
-        transferCurrentTaskStateTo(getPreviousTaskState());
-        textToSpeech.reset();
-        medicinePreparation.reset();
+        if (medicineDetectionFailedTimes < 3) {
+            delegateTextToSpeech("无法检测到药品，请尝试将药品摆放至机器人前方的桌面上，机器人会在 30 秒内重试。");
+        } else {
+            delegateTextToSpeech("药品检测连续失败 3 次，已放弃当前任务。");
+        }
+    } else if (textToSpeech.hasEnded) {
+        if (medicineDetectionFailedTimes < 3) {
+            if (!waitingForMedicinePreparation.hasStarted) {
+                waitingForMedicinePreparation.start();
+                nodeTiming.addTimedTask(30_s, [this]() { waitingForMedicinePreparation.end(); }, "等待清除障碍物结束");
+            } else if (waitingForMedicinePreparation.hasEnded) {
+                transferCurrentTaskStateTo(getPreviousTaskState());
+                medicineDetectionFailedTimes++;
+                waitingForMedicinePreparation.reset();
+                textToSpeech.reset();
+            }
+        } else {
+            medicineDetectionFailedTimes = 0;
+            transferCurrentTaskStateTo(TaskState::GiveUpCurrentTask);
+            textToSpeech.reset();
+        }
     }
 }
 

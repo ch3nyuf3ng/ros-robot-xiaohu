@@ -33,6 +33,7 @@
 #include "xiaohu_robot/TaskStateControlRequest.h"
 #include "xiaohu_robot/TaskStateControlResult.h"
 #include <sound_play/sound_play.h>
+#include <tf/transform_listener.h>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
@@ -74,6 +75,7 @@ using NavigationClient = actionlib::SimpleActionClient<move_base_msgs::MoveBaseA
 using SoundplayClient = sound_play::SoundClient;
 using ServiceClient = ros::ServiceClient;
 using Procedure = std_srvs::Empty;
+using TransformListener = tf::TransformListener;
 
 using NavigationGoal = move_base_msgs::MoveBaseGoal;
 using GoalState = actionlib::SimpleClientGoalState;

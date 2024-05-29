@@ -9,20 +9,18 @@ set(CMAKE_CXX_STANDARD 14)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  actionlib
+  geometry_msgs
+  message_generation
+  move_base_msgs
+  nav_msgs
   roscpp
   roslib
   sensor_msgs
-  std_msgs
-  geometry_msgs
-  wpb_home_behaviors
-  message_generation
-  actionlib
-  move_base_msgs
-  sound_play
-  tf
-  nav_msgs
-  xfyun_waterplus
   serial
+  sound_play
+  std_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -126,18 +124,19 @@ catkin_package(
   INCLUDE_DIRS include
 # LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
+    actionlib
+    geometry_msgs
+    message_runtime
+    move_base_msgs
+    nav_msgs
     roscpp
     roslib
     sensor_msgs
-    geometry_msgs
-    std_msgs
-    nav_msgs
-    message_runtime
-    waterplus_map_tools
-    wpb_home_behaviors
-    actionlib
-    move_base_msgs
     serial
+    sound_play
+    std_msgs
+    tf
+    wpb_home_behaviors
 # DEPENDS system_lib
 )
 

@@ -9,6 +9,7 @@
 #include <nav_msgs/GetMap.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <sstream>
+#include <stdexcept>
 
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
@@ -23,30 +24,46 @@ namespace xiaohu_robot {
 inline namespace Nodes {
 MapServiceNode::MapServiceNode(Configs configs):
     nodeHandle{configs.nodeBasicConfigs.nodeNamespace},
-    gmappingStartRequestSubscriber{nodeHandle.subscribe(
+    gmappingStartRequestSubscriber{nodeHandle.subscribe<EmptyMessage>(
         configs.gmappingStartRequestTopic,
         configs.nodeBasicConfigs.messageBufferSize,
         &MapServiceNode::whenReceivedGmappingStartRequest,
         this
     )},
-    gmappingStopRequestSubscriber{nodeHandle.subscribe(
+    gmappingStartResultPublisher{nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.gmappingStartResultTopic, configs.nodeBasicConfigs.messageBufferSize
+    )},
+    gmappingStopRequestSubscriber{nodeHandle.subscribe<EmptyMessage>(
         configs.gmappingStopRequestTopic,
         configs.nodeBasicConfigs.messageBufferSize,
         &MapServiceNode::whenReceivedGmappingStopRequest,
         this
     )},
-    mapPublisher{
-        nodeHandle.advertise<nav_msgs::OccupancyGrid>(configs.globalMapTopic, configs.nodeBasicConfigs.messageBufferSize)
-    },
+    gmappingStopResultPublisher{nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.gmappingStopResultTopic, configs.nodeBasicConfigs.messageBufferSize
+    )},
     mapSavingRequestSubscriber{nodeHandle.subscribe<nav_msgs::OccupancyGrid>(
         configs.mapSavingRequestTopic,
         configs.nodeBasicConfigs.messageBufferSize,
-        &MapServiceNode::saveMap,
+        &MapServiceNode::whenReceivedMapSavingRequest,
         this
     )},
+    mapSavingResultPublisher{nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.mapSavingResultTopic, configs.nodeBasicConfigs.messageBufferSize
+    )},
+    mapPublisher{nodeHandle.advertise<nav_msgs::OccupancyGrid>(
+        configs.globalMapTopic, configs.nodeBasicConfigs.messageBufferSize
+    )},
+
+    transformListener{},
+    currentPositionResultPublisher{nodeHandle.advertise<geometry_msgs::Pose>("current_position_result", 10)},
+    currentPositionRequestSubscriber{
+        nodeHandle.subscribe("current_position_request", 10, &MapServiceNode::whenReceivedCurrentPositionRequest, this)
+    },
     isGmappingRunning{false},
     gmappingThread{},
-    getMapServiceClient{nodeHandle.serviceClient<nav_msgs::GetMap>(configs.gmappingGetMapTopic)} {
+    getMapServiceClient{nodeHandle.serviceClient<nav_msgs::GetMap>(configs.gmappingGetMapTopic)},
+    configs{std::move(configs)} {
     std::cout << "建图节点已启动。" << std::endl;
 }
 
@@ -72,8 +89,14 @@ void MapServiceNode::whenReceivedGmappingStartRequest(EmptyMessage::ConstPtr con
         startGMapping();
         isGmappingRunning = true;
         ROS_INFO("GMapping 已启动。");
+        StatusAndDescriptionMessage result;
+        result.status = StatusAndDescriptionMessage::done;
+        gmappingStartResultPublisher.publish(result);
     } else {
         ROS_WARN("GMapping 已经运行了。");
+        StatusAndDescriptionMessage result;
+        result.status = StatusAndDescriptionMessage::cancelled;
+        gmappingStartResultPublisher.publish(result);
     }
 }
 
@@ -83,9 +106,46 @@ void MapServiceNode::whenReceivedGmappingStopRequest(EmptyMessage::ConstPtr cons
         stopGMapping();
         isGmappingRunning = false;
         ROS_INFO("GMapping 已停止。");
+        StatusAndDescriptionMessage result;
+        result.status = StatusAndDescriptionMessage::done;
+        gmappingStartResultPublisher.publish(result);
     } else {
         ROS_WARN("GMapping 不在运行中。");
+        StatusAndDescriptionMessage result;
+        result.status = StatusAndDescriptionMessage::cancelled;
+        gmappingStartResultPublisher.publish(result);
     }
+}
+
+void MapServiceNode::whenReceivedCurrentPositionRequest(std_msgs::Empty::ConstPtr const&) {
+    tf::StampedTransform transform;
+    try {
+        transformListener.lookupTransform(configs.globalMapTopic, configs.baseLinkTopic, ros::Time(0), transform);
+    } catch (tf::TransformException const& ex) {
+        ROS_ERROR("获取当前坐标失败：%s", ex.what());
+        return;
+    }
+
+    CoordinateMessage currentPositionResult;
+    currentPositionResult.position.x = transform.getOrigin().x();
+    currentPositionResult.position.y = transform.getOrigin().y();
+    currentPositionResult.position.z = transform.getOrigin().z();
+
+    tf::Quaternion q = transform.getRotation();
+    currentPositionResult.orientation.x = q.x();
+    currentPositionResult.orientation.y = q.y();
+    currentPositionResult.orientation.z = q.z();
+    currentPositionResult.orientation.w = q.w();
+
+    currentPositionResultPublisher.publish(currentPositionResult);
+}
+
+void MapServiceNode::whenReceivedMapSavingRequest(nav_msgs::OccupancyGrid::ConstPtr const& request) {
+    mapPublisher.publish(request);
+    saveCurrentMap();
+    StatusAndDescriptionMessage result;
+    result.status = StatusAndDescriptionMessage::done;
+    gmappingStartResultPublisher.publish(result);
 }
 
 void MapServiceNode::startGMapping() {
@@ -128,12 +188,8 @@ void MapServiceNode::saveCurrentMap() {
     int error{std::system(command.str().c_str())};
     if (error) {
         ROS_WARN("%s 返回值：%d", command.str().c_str(), error);
+        throw std::runtime_error("保存当前地图失败。");
     }
-}
-
-void MapServiceNode::saveMap(nav_msgs::OccupancyGrid::ConstPtr const& request) {
-    mapPublisher.publish(request);
-    saveCurrentMap();
 }
 }  // namespace Nodes
 }  // namespace xiaohu_robot

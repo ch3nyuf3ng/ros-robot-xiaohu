@@ -11,8 +11,11 @@ inline namespace Foundation {
 struct CommonConfigs final {
     static std::string const baseStationName;
     static std::string const xiaohuRobotNamespace;
+    static std::string const baseLinkTopic;
     static std::string const currentTaskStateRequestTopic;
     static std::string const currentTaskStateResultTopic;
+    static std::string const currentPositionRequestTopic;
+    static std::string const currentPositionResultTopic;
     static std::string const medicineDeliveryTaskRequestTopic;
     static std::string const medicineDeliveryTaskResultTopic;
     static std::string const legacyGeneralTasksRequestTopic;
@@ -22,6 +25,7 @@ struct CommonConfigs final {
     static std::string const mappingTaskRequestTopic;
     static std::string const mappingTaskResultTopic;
     static std::string const mapSavingRequestTopic;
+    static std::string const mapSavingResultTopic;
     static std::string const initPositionRequestTopic;
     static std::string const initPositionResultTopic;
     static std::string const videoCallingRequestTopic;
@@ -48,7 +52,9 @@ struct CommonConfigs final {
     static std::string const temperatureMeasurementRequestTopic;
     static std::string const temperatureMeasurementResultTopic;
     static std::string const gmappingStartRequestTopic;
+    static std::string const gmappingStartResultTopic;
     static std::string const gmappingStopRequestTopic;
+    static std::string const gmappingStopResultTopic;
     static std::string const globalMapTopic;
     static std::string const videoCallRequestTopic;
     static std::string const videoCallResultTopic;
