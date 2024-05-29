@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <thread>
 #ifndef XIAOHU_MOVE_OBJECT_NODE_HPP
 #define XIAOHU_MOVE_OBJECT_NODE_HPP
@@ -107,9 +108,9 @@ private:
     };
 
     struct DelegationState {
-        bool hasStarted{false};
-        bool hasFailed{false};
-        bool hasEnded{false};
+        std::atomic_bool hasStarted{false};
+        std::atomic_bool hasFailed{false};
+        std::atomic_bool hasEnded{false};
 
         virtual ~DelegationState() = default;
         virtual void reset();
@@ -120,8 +121,8 @@ private:
     };
 
     struct SpeechRecognitionContext final: public DelegationState {
-        bool foundYes{false};
-        bool foundNo{false};
+        std::atomic_bool foundYes{false};
+        std::atomic_bool foundNo{false};
 
         void reset() override;
     };
@@ -178,6 +179,7 @@ private:
     int navigationFailedTimes;
 
     std::thread navigationThread;
+    std::thread navigationWaitingThread;
     ServiceClient clearCostmapsClient;
     DelegationState obstacleClearing;
     DelegationState navigation;
@@ -276,6 +278,7 @@ private:
 
     void delegateVelocityControl(LinearSpeed forward);
     void delegateObjectDetectionControl(ObjectDetectionControl target);
+    void delegateNavigation(NavigationGoal);
     void delegateNavigatingToWaypoint(std::string target);
     void delegateControlingRobotManipulator(ManipulatorControl const& target);
     void delegateObjectGrasping(Coordinate coordinate);

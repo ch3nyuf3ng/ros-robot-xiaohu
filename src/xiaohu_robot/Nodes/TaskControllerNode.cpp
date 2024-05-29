@@ -1,5 +1,6 @@
 #include "xiaohu_robot/Nodes/TaskControllerNode.hpp"
 #include "ros/console.h"
+#include "ros/duration.h"
 #include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
@@ -323,7 +324,7 @@ void TaskControllerNode::run() {
             videoCallFailed();
             break;
         }
-        checkNavigationState();
+        // checkNavigationState();
         ros::spinOnce();
         if (!taskState.stateTransferring) {
             nodeTiming.increment();
@@ -497,13 +498,14 @@ void TaskControllerNode::goToPharmacy() {
         }
     } else {
         if (!navigation.hasStarted) {
-            navigation.start();
-            navigationClient.sendGoal(getCurrentMedicineDeliveryTask().pharmacyPosition.toNavigationGoal());
+            delegateNavigation(getCurrentMedicineDeliveryTask().pharmacyPosition.toNavigationGoal());
         } else if (navigation.hasEnded) {
             transferCurrentTaskStateTo(TaskState::DetectingMedicine);
+            navigationWaitingThread.join();
             navigation.reset();
         } else if (navigation.hasFailed) {
             transferCurrentTaskStateTo(TaskState::WaypointUnreachable);
+            navigationWaitingThread.join();
             navigation.reset();
         }
     }
@@ -556,12 +558,10 @@ void TaskControllerNode::goToPatient() {
             case TaskType::Mapping:
                 throw UnsupportedTaskException();
             case TaskType::Inspection:
-                navigation.start();
-                navigationClient.sendGoal(getCurrentInspectionTask().patientPosition.toNavigationGoal());
+                delegateNavigation(getCurrentInspectionTask().patientPosition.toNavigationGoal());
                 break;
             case TaskType::MedicineDelivery:
-                navigation.start();
-                navigationClient.sendGoal(getCurrentMedicineDeliveryTask().patientPosition.toNavigationGoal());
+                delegateNavigation(getCurrentMedicineDeliveryTask().patientPosition.toNavigationGoal());
                 break;
             }
         } else if (navigation.hasEnded) {
@@ -575,6 +575,11 @@ void TaskControllerNode::goToPatient() {
                 transferCurrentTaskStateTo(TaskState::SpeakingPrescription);
                 break;
             }
+            navigationWaitingThread.join();
+            navigation.reset();
+        } else if (navigation.hasFailed) {
+            transferCurrentTaskStateTo(TaskState::WaypointUnreachable);
+            navigationWaitingThread.join();
             navigation.reset();
         }
     }
@@ -714,7 +719,8 @@ void TaskControllerNode::askIfVideoNeeded() {
         textToSpeech.reset();
     } else if (speechReognition.hasEnded) {
         transferCurrentTaskStateTo(TaskState::ConfirmPatientRequest);
-        confirmSpeechRecognition = speechReognition;
+        bool foundYes{speechReognition.foundYes};
+        confirmSpeechRecognition.foundYes = foundYes;
         speechRecognitionFailedTimes = 0;
         speechReognition.reset();
         textToSpeech.reset();
@@ -794,13 +800,14 @@ void TaskControllerNode::videoCommunicating() {
 void TaskControllerNode::goToBaseStation() {
     if (tasks.empty()) {
         if (!navigation.hasStarted) {
-            navigation.start();
-            navigationClient.sendGoal(baseStatePosition.toNavigationGoal());
+            delegateNavigation(baseStatePosition.toNavigationGoal());
         } else if (navigation.hasEnded) {
             transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+            navigationWaitingThread.join();
             navigation.reset();
         } else if (navigation.hasFailed) {
             transferCurrentTaskStateTo(TaskState::WaypointUnreachable);
+            navigationWaitingThread.join();
             navigation.reset();
         }
     } else {
@@ -809,12 +816,14 @@ void TaskControllerNode::goToBaseStation() {
         } else {
             if (navigation.hasEnded) {
                 transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+                navigationWaitingThread.join();
                 navigation.reset();
             } else {
                 if (!navigation.hasFailed) {
                     navigationClient.cancelGoal();
                 } else {
                     transferCurrentTaskStateTo(TaskState::ReadyToPerformTasks);
+                    navigationWaitingThread.join();
                     navigation.reset();
                 }
             }
@@ -1106,6 +1115,27 @@ void TaskControllerNode::delegateNavigatingToWaypoint(std::string waypointName) 
     waypointNavigation.start();
     ROS_DEBUG("将导航至 %s。", waypointName.c_str());
     waypointNavigationRequestPublisher.publish(createWaypointMessage(std::move(waypointName)));
+}
+
+void TaskControllerNode::delegateNavigation(NavigationGoal goal) {
+    navigation.start();
+    navigationClient.sendGoal(goal);
+    navigationWaitingThread = std::thread([this](){
+        bool finishedBeforeTimeout{navigationClient.waitForResult(ros::Duration(120))};
+        GoalState state{navigationClient.getState()};
+        if (state == GoalState::SUCCEEDED) {
+            ROS_INFO("导航成功。");
+            navigation.end();
+        } else {
+            ROS_INFO("导航因为某种原因失败。");
+            navigation.fail();
+        }
+        if (finishedBeforeTimeout) {
+            ROS_INFO("导航因为超时而失败。");
+            navigationClient.cancelGoal();
+            navigation.fail();
+        }
+    });
 }
 
 void TaskControllerNode::delegateControlingRobotManipulator(ManipulatorControl const& plan) {
