@@ -1,6 +1,5 @@
 #include "xiaohu_robot/Foundation/Audio.hpp"
 #include <alsa/pcm.h>
-#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <exception>
@@ -9,7 +8,6 @@
 #include <ostream>
 #include <stdexcept>
 #include <thread>
-#include <unistd.h>
 
 namespace xiaohu_robot {
 inline namespace Foundation {

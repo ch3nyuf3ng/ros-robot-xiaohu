@@ -1,7 +1,6 @@
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <cstddef>
-#include <memory>
 #include <sstream>
 #include <utility>
 

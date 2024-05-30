@@ -1,5 +1,4 @@
 #include "xiaohu_robot/Foundation/Task.hpp"
-#include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <sstream>
 #include <stdexcept>

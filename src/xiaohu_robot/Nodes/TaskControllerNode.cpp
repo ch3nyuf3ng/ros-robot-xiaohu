@@ -1,7 +1,6 @@
 #include "xiaohu_robot/Nodes/TaskControllerNode.hpp"
 #include "ros/console.h"
 #include "ros/duration.h"
-#include "xiaohu_robot/Foundation/Coordinate.hpp"
 #include "xiaohu_robot/Foundation/ManipulatorControl.hpp"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/Foundation/Task.hpp"
@@ -439,6 +438,9 @@ void TaskControllerNode::startNavigationNodes() {
         throw std::runtime_error("在调用该方法之前导航节点线程已运行。");
     }
     navigationThread = std::thread([this]() {
+        if (!freopen("/dev/null", "w", stderr)) {
+            std::cerr << "Failed to redirect stderr to /dev/null" << std::endl;
+        }
         std::ostringstream command;
         command << "roslaunch " << configs.nodeBasicConfig.nodeNamespace << " navigation.launch &";
         int error{std::system(command.str().c_str())};
@@ -1102,13 +1104,17 @@ void TaskControllerNode::delegateObjectDetectionControl(ObjectDetectionControl b
     switch (behavior) {
     case ObjectDetectionControl::Start:
         medicineDetection.start();
-        nodeTiming.addTimedTask(3_s, [this](){
-            if (medicineDetection.hasStarted && !medicineDetection.hasEnded && !medicineDetection.hasFailed) {
-                delegateObjectDetectionControl(ObjectDetectionControl::Stop);
-                ROS_ERROR("药品检测超时。");
-                medicineDetection.fail();
-            }
-        }, "药品检测超时");
+        nodeTiming.addTimedTask(
+            3_s,
+            [this]() {
+                if (medicineDetection.hasStarted && !medicineDetection.hasEnded && !medicineDetection.hasFailed) {
+                    delegateObjectDetectionControl(ObjectDetectionControl::Stop);
+                    ROS_ERROR("药品检测超时。");
+                    medicineDetection.fail();
+                }
+            },
+            "药品检测超时"
+        );
         break;
     case ObjectDetectionControl::Stop:
         medicineDetection.end();
@@ -1127,7 +1133,7 @@ void TaskControllerNode::delegateNavigatingToWaypoint(std::string waypointName) 
 void TaskControllerNode::delegateNavigation(NavigationGoal goal) {
     navigation.start();
     navigationClient.sendGoal(goal);
-    navigationWaitingThread = std::thread([this](){
+    navigationWaitingThread = std::thread([this]() {
         bool finishedBeforeTimeout{navigationClient.waitForResult(ros::Duration(120))};
         GoalState state{navigationClient.getState()};
         if (state == GoalState::SUCCEEDED) {
