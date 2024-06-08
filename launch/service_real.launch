@@ -2,6 +2,8 @@
     <group ns="xiaohu_robot">
         <param name="real_temperature" value="true" />
     </group>
+    <include file="$(find xiaohu_robot)/robot/joystick.launch" />
+    <include file="$(find xiaohu_robot)/robot/web_interface.launch" />
     <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
     <include file="$(find xiaohu_robot)/manipulator/manipulator_real.launch" />
     <include file="$(find xiaohu_robot)/rviz/rviz.launch" />

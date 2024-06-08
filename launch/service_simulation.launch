@@ -2,6 +2,8 @@
     <group ns="xiaohu_robot">
         <param name="real_temperature" value="false" />
     </group>
+    <include file="$(find xiaohu_robot)/robot/joystick.launch" />
+    <include file="$(find xiaohu_robot)/robot/web_interface.launch" />
     <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
     <include file="$(find xiaohu_robot)/manipulator/manipulator_simulation.launch" />
     <include file="$(find xiaohu_robot)/lidar/filter.launch" />
