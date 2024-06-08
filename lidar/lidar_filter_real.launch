@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="wpb_home_bringup" type="wpb_home_lidar_filter" name="wpb_home_lidar_filter">
+        <param name="pub_topic" value="/scan" />
+    </node>
+</launch>

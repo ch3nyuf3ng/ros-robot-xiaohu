@@ -5,7 +5,7 @@
     <include file="$(find xiaohu_robot)/launch/joystick.launch" />
     <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
     <include file="$(find xiaohu_robot)/manipulator/manipulator_simulation.launch" />
-    <include file="$(find xiaohu_robot)/lidar/filter.launch" />
+    <include file="$(find xiaohu_robot)/lidar/lidar_filter_simulation.launch" />
     <include file="$(find xiaohu_robot)/voice/voice.launch" />
     <include file="$(find xiaohu_robot)/gazebo/gazebo.launch" />
     <include file="$(find xiaohu_robot)/functions/object_detect.launch" />
