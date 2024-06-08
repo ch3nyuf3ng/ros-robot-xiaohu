@@ -3,7 +3,6 @@
         <param name="real_temperature" value="true" />
     </group>
     <include file="$(find xiaohu_robot)/launch/joystick.launch" />
-    <include file="$(find xiaohu_robot)/launch/web_interface.launch" />
     <include file="$(find xiaohu_robot)/robot/robot_description.launch" />
     <include file="$(find xiaohu_robot)/manipulator/manipulator_real.launch" />
     <include file="$(find xiaohu_robot)/rviz/rviz.launch" />

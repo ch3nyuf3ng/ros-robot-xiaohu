@@ -320,6 +320,25 @@ target_link_libraries(${PROJECT_NAME}_core_sim_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(${PROJECT_NAME}_keyboard_vel_ctrl
+  src/${PROJECT_NAME}/Nodes/keyboard_vel_ctrl.cpp
+)
+
+set_target_properties(${PROJECT_NAME}_keyboard_vel_ctrl
+  PROPERTIES
+    OUTPUT_NAME keyboard_vel_ctrl
+    PREFIX ""
+)
+
+add_dependencies(${PROJECT_NAME}_keyboard_vel_ctrl
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(${PROJECT_NAME}_keyboard_vel_ctrl
+  ${catkin_LIBRARIES}
+)
+
 #############
 ## Install ##
 #############
