@@ -27,7 +27,8 @@ MapLoadingModeControllerNode::MapLoadingModeControllerNode(MapLoadingModeControl
     )),
     mapDataPublisher(
         nodeHandle.advertise<MapDataMessage>(configs.mapDataTopic, configs.nodeBasicConfigs.messageBufferSize, true)
-    ) {
+    ),
+    configs(std::move(configs)) {
     std::cout << "地图加载器节点已启动。" << std::endl;
 }
 
@@ -42,7 +43,7 @@ void MapLoadingModeControllerNode::run() {
 void MapLoadingModeControllerNode::whenReceivedMapLoadingRequest(MapDataMessage::ConstPtr const& mapData) {
     mapDataPublisher.publish(mapData);
     StatusAndDescriptionMessage result;
-    std::string const command{"roscd xiaohu_robot/maps/runtime && rosrun map_server map_server"};
+    std::string const command{"cd " + configs.mapSavingPath + " && rosrun map_server map_saver -f map"};
     if (int error{std::system(command.c_str())}) {
         result.status = StatusAndDescriptionMessage::failed;
         result.description = "地图加载失败。";

@@ -1,5 +1,6 @@
 <launch>
-    <include file="$(find xiaohu_robot)/launch/phy/joystick.launch" if="$(param using_joystick)"/>
+    <arg name="using_joystick" default="false" />
+    <include file="$(find xiaohu_robot)/launch/phy/joystick.launch" if="$(arg using_joystick)"/>
     <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" required="true" output="screen" >
         <param name="xmin" value="-10.0" />
         <param name="ymin" value="-10.0" />

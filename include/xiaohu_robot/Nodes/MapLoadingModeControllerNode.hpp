@@ -15,6 +15,7 @@ public:
         std::string mapDataTopic{CommonConfigs::MapDataTopic};
         std::string mapLoadingRequestTopic{CommonConfigs::MapLoadingRequestTopic};
         std::string mapLoadingResultTopic{CommonConfigs::EnableMapLoadingModeResultTopic};
+        std::string mapSavingPath{CommonConfigs::PackagePath() + "/maps/runtime/"};
         NodeBasicConfigs nodeBasicConfigs{};
     };
 
@@ -34,6 +35,7 @@ private:
     Subscriber mapLoadingRequestSubscriber;
     Publisher mapLoadingResultPublisher;
     Publisher mapDataPublisher;
+    Configs configs;
 };
 }  // namespace Nodes
 }  // namespace xiaohu_robot

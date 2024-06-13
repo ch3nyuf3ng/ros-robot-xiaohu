@@ -1,6 +1,5 @@
 <launch>
     <arg name="is_real" default="false" />
-    <arg name="using_joystick" default="false" />
     <group ns="xiaohu_robot">
         <param name="is_real" value="$(arg is_real)" />
     </group>

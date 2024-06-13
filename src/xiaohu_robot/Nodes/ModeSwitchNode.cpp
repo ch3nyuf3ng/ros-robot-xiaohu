@@ -87,12 +87,13 @@ void ModeSwitchNode::whenReceivedEnableMapLoadingModeRequest(EmptyMessage::Const
 }
 
 void ModeSwitchNode::runMode(Mode mode) {
-    modeNodesThread = std::thread{[this, mode]() {
+    this->mode = mode;
+    modeNodesThread = std::thread{[this]() {
         std::string command{
-            "roslaunch " + configs.nodeBasicConfigs.nodeNamespace + " " + toString(mode) + ".launch"
+            "roslaunch " + configs.nodeBasicConfigs.nodeNamespace + " " + toString(this->mode) + ".launch"
         };
         if (int error{std::system(command.c_str())}) {
-            printMessageThenThrowRuntimeError("当前模式异常退出。");
+            std::cout << toString(this->mode) << " 退出，返回值：" << error << std::endl;
         }
     }};
 }

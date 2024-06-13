@@ -830,7 +830,9 @@ void ServiceModeControllerNode::whenReceivedInitPositionRequest(CoordinateMessag
 void ServiceModeControllerNode::whenReceivedInspectionTaskRequest(InspectionTaskRequestMessage::ConstPtr const& message
 ) {
     tasks.emplace_back(std::make_unique<InspectionTask>(message));
-    taskState.taskResults.push_back(std::make_unique<InspectionTask::Result>(getCurrentInspectionTask()));
+    taskState.taskResults.push_back(std::make_unique<InspectionTask::Result>(
+        dynamic_cast<InspectionTask&>(*tasks.back())
+    ));
     ROS_INFO("收到一个任务:\n%s", tasks.back()->toString().c_str());
 }
 
@@ -838,7 +840,9 @@ void ServiceModeControllerNode::whenReceivedMedicineDeliveryTaskRequest(
     MedicineDeliveryTaskRequestMessage::ConstPtr const& message
 ) {
     tasks.emplace_back(std::make_unique<MedicineDeliveryTask>(message));
-    taskState.taskResults.push_back(std::make_unique<MedicineDeliveryTask::Result>(getCurrentMedicineDeliveryTask()));
+    taskState.taskResults.push_back(std::make_unique<MedicineDeliveryTask::Result>(
+        dynamic_cast<MedicineDeliveryTask&>(*tasks.back())
+    ));
     ROS_INFO("收到一个任务:\n%s", tasks.back()->toString().c_str());
 }
 
@@ -962,7 +966,7 @@ void ServiceModeControllerNode::delegateNavigation(NavigationGoal goal) {
             ROS_INFO("导航因为某种原因失败。");
             navigation.fail();
         }
-        if (finishedBeforeTimeout) {
+        if (!finishedBeforeTimeout) {
             ROS_INFO("导航因为超时而失败。");
             navigationClient.cancelGoal();
             navigation.fail();
