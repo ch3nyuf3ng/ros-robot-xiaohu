@@ -98,7 +98,7 @@ void ModeSwitchNode::runMode(Mode mode) {
 }
 
 void ModeSwitchNode::endMode(ModeSwitchNode::Mode mode) {
-    std::string command{"roskill " + configs.nodeBasicConfigs.nodeNamespace + " "};
+    std::string command{"rosnode kill "};
     std::string modeChineseName{};
     switch (mode) {
     case Mode::Service:
