@@ -4,10 +4,10 @@
         <param name="serial_port" type="string" value="/dev/ftdi" />
         <rosparam file="$(find xiaohu_robot)/launch/phy/params/compensation.yaml" command="load" />
     </node>
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" if="$(arg is_real)" required="true">
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" required="true">
         <rosparam file="$(find xiaohu_robot)/launch/phy/params/compensation.yaml" command="load" />
     </node>
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" if="$(arg is_real)" required="true" />
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" required="true" />
     <rosparam file="$(find xiaohu_robot)/launch/phy/params/simulation.yaml" command="load" unless="$(arg is_real)" />
     <node
         name="controller_spawner" pkg="controller_manager" type="spawner" unless="$(arg is_real)" required="true"
