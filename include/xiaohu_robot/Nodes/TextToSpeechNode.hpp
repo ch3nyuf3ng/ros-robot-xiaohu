@@ -15,9 +15,9 @@ inline namespace Nodes {
 class TextToSpeechNode final: public Runnable {
 public:
     struct Configs final {
-        std::string textToSpeechRequestTopic{CommonConfigs::textToSpeechRequestTopic};
-        std::string textToSpeechResultTopic{CommonConfigs::textToSpeechResultTopic};
-        std::string loginParams{CommonConfigs::xfyunApiLoginParams};
+        std::string textToSpeechRequestTopic{CommonConfigs::TextToSpeechRequestTopic};
+        std::string textToSpeechResultTopic{CommonConfigs::TextToSpeechResultTopic};
+        std::string loginParams{CommonConfigs::XfyunApiLoginParams};
         std::string params{XunfeiApi::Params::OnlineTtsParams{}.generateOnlineTtsParamsString()};
         std::string audioFilePath = "/dev/shm/tts_result.wav";
         NodeBasicConfigs nodeBasicConfig{};

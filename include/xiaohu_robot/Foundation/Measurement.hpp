@@ -4,10 +4,10 @@
 #define XIAOHU_ROBOT_FOUNDATION_MEASUREMENT_HPP
 
 #include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
+#include "xiaohu_robot/Foundation/Exceptions.hpp"
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 
@@ -279,7 +279,7 @@ public:
         if (unitEquals(*this, rhs))
             value += rhs.value;
         else
-            throw std::runtime_error{unitDoNotMatchInfo(*this, rhs)};
+            printMessageThenThrowRuntimeError(unitDoNotMatchInfo(*this, rhs));
         return *this;
     }
 
@@ -355,7 +355,7 @@ public:
         if (unitEquals(lhs, rhs))
             return lhs.value / rhs.value;
         else
-            throw std::runtime_error{unitDoNotMatchInfo(lhs, rhs)};
+            printMessageThenThrowRuntimeError(unitDoNotMatchInfo(lhs, rhs));
     }
 
     template<typename T = UnitType, std::enable_if_t<std::is_base_of<ConvertibleUnit, T>::value, bool> = true>
@@ -371,7 +371,7 @@ public:
         if (unitEquals(lhs, rhs))
             return lhs.value < rhs.value;
         else
-            throw std::runtime_error{unitDoNotMatchInfo(lhs, rhs)};
+            printMessageThenThrowRuntimeError(unitDoNotMatchInfo(lhs, rhs));
     }
 
     template<typename T = UnitType, std::enable_if_t<std::is_base_of<ConvertibleUnit, T>::value, bool> = true>
@@ -399,7 +399,7 @@ public:
         if (unitEquals(lhs, rhs))
             return lhs.value == rhs.value;
         else
-            throw std::runtime_error{unitDoNotMatchInfo(lhs, rhs)};
+            printMessageThenThrowRuntimeError(unitDoNotMatchInfo(lhs, rhs));
     }
 
     template<typename T = UnitType, std::enable_if_t<std::is_base_of<ConvertibleUnit, T>::value, bool> = true>

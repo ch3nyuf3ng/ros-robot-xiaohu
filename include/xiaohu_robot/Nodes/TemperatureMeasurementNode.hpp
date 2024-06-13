@@ -14,8 +14,9 @@ inline namespace Nodes {
 class TemperatureMeasurementNode final: public Runnable {
 public:
     struct Configs final {
-        std::string temperatureMeasurementRequestTopic{CommonConfigs::temperatureMeasurementRequestTopic};
-        std::string temperatureMeasurementResultTopic{CommonConfigs::temperatureMeasurementResultTopic};
+        std::string isRealParameter{CommonConfigs::IsRealParameter};
+        std::string temperatureMeasurementRequestTopic{CommonConfigs::TemperatureMeasurementRequestTopic};
+        std::string temperatureMeasurementResultTopic{CommonConfigs::TemperatureMeasurementResultTopic};
         NodeBasicConfigs nodeBasicConfigs;
     };
 

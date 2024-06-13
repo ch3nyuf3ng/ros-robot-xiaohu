@@ -5,71 +5,78 @@
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-std::string const CommonConfigs::baseStationName{"base"};
-std::string const CommonConfigs::xiaohuRobotNamespace{"xiaohu_robot"};
-std::string const CommonConfigs::baseLinkTopic{"/base_link"};
-std::string const CommonConfigs::currentTaskStateRequestTopic{"current_task_state_request"};
-std::string const CommonConfigs::currentTaskStateResultTopic{"current_task_state_result"};
-std::string const CommonConfigs::currentPositionRequestTopic{"current_position_request"};
-std::string const CommonConfigs::currentPositionResultTopic{"current_position_result"};
-std::string const CommonConfigs::legacyGeneralTasksRequestTopic{"legacy_tasks_request"};
-std::string const CommonConfigs::legacyGeneralTasksResultTopic{"legacy_tasks_result"};
-std::string const CommonConfigs::inspectionTaskRequestTopic{"inspection_task_request"};
-std::string const CommonConfigs::inspectionTaskResultTopic{"inspection_task_result"};
-std::string const CommonConfigs::mappingTaskRequestTopic{"mapping_task_request"};
-std::string const CommonConfigs::mappingTaskResultTopic{"mapping_task_result"};
-std::string const CommonConfigs::mapSavingRequestTopic{"map_saving_request"};
-std::string const CommonConfigs::mapSavingResultTopic{"map_saving_result"};
-std::string const CommonConfigs::medicineDeliveryTaskRequestTopic{"medicine_delivery_task_request"};
-std::string const CommonConfigs::medicineDeliveryTaskResultTopic{"medicine_delivery_task_result"};
-std::string const CommonConfigs::initPositionRequestTopic{"init_position_request"};
-std::string const CommonConfigs::initPositionResultTopic{"init_position_result"};
-std::string const CommonConfigs::videoCallingRequestTopic{"video_call_request"};
-std::string const CommonConfigs::videoCallingResultTopic{"viedo_call_result"};
-std::string const CommonConfigs::continueProcedureRequestTopic{"continue_request"};
-std::string const CommonConfigs::continueProcedureResultTopic{"continue_result"};
-std::string const CommonConfigs::joystickResultTopic{"/joy"};
-std::string const CommonConfigs::gmappingGetMapTopic{"/dynamic_map"};
-std::string const CommonConfigs::amclInitPositionRequestTopic{"/initialpose"};
-std::string const CommonConfigs::coordinateNavigationTopic{"/move_base"};
-std::string const CommonConfigs::clearCostmapsTopic{coordinateNavigationTopic + "/clear_costmaps"};
-std::string const CommonConfigs::velocityControlRequestTopic{"/cmd_vel"};
-std::string const CommonConfigs::manipulatorControlRequestTopic{"/wpb_home/mani_ctrl"};
-std::string const CommonConfigs::medcineDetectionRequestTopic{"/wpb_home/behaviors"};
-std::string const CommonConfigs::medicineDetectionResultTopic{"/wpb_home/objects_3d"};
-std::string const CommonConfigs::waypointNavigationRequestTopic{"/waterplus/navi_waypoint"};
-std::string const CommonConfigs::waypointNavigationResultTopic{"/waterplus/navi_result"};
-std::string const CommonConfigs::medicineGraspRequestTopic{"/wpb_home/grab_action"};
-std::string const CommonConfigs::medicineGraspResultTopic{"/wpb_home/grab_result"};
-std::string const CommonConfigs::textToSpeechRequestTopic{"text_to_speech_request"};
-std::string const CommonConfigs::textToSpeechResultTopic{"text_to_speech_result"};
-std::string const CommonConfigs::speechRecognitionRequestTopic{"speech_recognition_request"};
-std::string const CommonConfigs::speechRecognitionResultTopic{"speech_recognition_result"};
-std::string const CommonConfigs::temperatureMeasurementRequestTopic{"temperature_measurement_request"};
-std::string const CommonConfigs::temperatureMeasurementResultTopic{"temperature_measurement_result"};
-std::string const CommonConfigs::gmappingStartRequestTopic{"gmapping_start_request"};
-std::string const CommonConfigs::gmappingStartResultTopic{"gmapping_start_result"};
-std::string const CommonConfigs::gmappingStopRequestTopic{"gmapping_stop_request"};
-std::string const CommonConfigs::gmappingStopResultTopic{"gmapping_stop_result"};
-std::string const CommonConfigs::globalMapTopic{"/map"};
-std::string const CommonConfigs::videoCallRequestTopic{"video_call_request"};
-std::string const CommonConfigs::videoCallResultTopic{"video_call_result"};
-std::string const CommonConfigs::xfyunApiLoginParams{"appid = f897d917"};
-std::size_t const CommonConfigs::messageBufferSize{10};
+std::string const CommonConfigs::AmclInitPositionRequestTopic{"/initialpose"};
+std::string const CommonConfigs::BaseLinkTopic{"/base_footprint"};
+std::string const CommonConfigs::ClearCostmapsTopic{"/move_base/clear_costmaps"};
+std::string const CommonConfigs::CoordinateNavigationTopic{"/move_base"};
+std::string const CommonConfigs::CurrentTaskStateRequestTopic{"current_task_state_request"};
+std::string const CommonConfigs::CurrentTaskStateResultTopic{"current_task_state_result"};
+std::string const CommonConfigs::CurrentPositionRequestTopic{"current_position_request"};
+std::string const CommonConfigs::CurrentPositionResultTopic{"current_position_result"};
+std::string const CommonConfigs::EnableMappingModeRequestTopic{"enable_mapping_mode_request"};
+std::string const CommonConfigs::EnableMappingModeResultTopic{"enable_mapping_mode_result"};
+std::string const CommonConfigs::EnableMapLoadingModeRequestTopic{"enable_map_loading_mode_request"};
+std::string const CommonConfigs::EnableMapLoadingModeResultTopic{"enable_map_loading_mode_result"};
+std::string const CommonConfigs::EnableServiceModeRequestTopic{"enable_service_mode_request"};
+std::string const CommonConfigs::EnableServiceModeResultTopic{"enable_service_mode_result"};
+std::string const CommonConfigs::GmappingGetMapTopic{"/dynamic_map"};
+std::string const CommonConfigs::GmappingStartRequestTopic{"gmapping_start_request"};
+std::string const CommonConfigs::GmappingStartResultTopic{"gmapping_start_result"};
+std::string const CommonConfigs::GmappingStopRequestTopic{"gmapping_stop_request"};
+std::string const CommonConfigs::GmappingStopResultTopic{"gmapping_stop_result"};
+std::string const CommonConfigs::InitPositionRequestTopic{"init_position_request"};
+std::string const CommonConfigs::InitPositionResultTopic{"init_position_result"};
+std::string const CommonConfigs::InspectionTaskRequestTopic{"inspection_task_request"};
+std::string const CommonConfigs::InspectionTaskResultTopic{"inspection_task_result"};
+std::string const CommonConfigs::IsRealParameter{"is_real"};
+std::string const CommonConfigs::LegacyGeneralTasksRequestTopic{"legacy_tasks_request"};
+std::string const CommonConfigs::LegacyGeneralTasksResultTopic{"legacy_tasks_result"};
 
-std::string const& CommonConfigs::packagePath() {
-    static std::string value{ros::package::getPath("xiaohu_robot")};
-    return value;
-}
-
-Frequency const& CommonConfigs::loopFrequency() {
+Frequency const& CommonConfigs::LoopFrequency() {
     static Frequency value{30_Hz};
     return value;
 }
 
-Duration const& CommonConfigs::maxTextSpeakingDuration() {
+std::string const CommonConfigs::ManipulatorControlRequestTopic{"/wpb_home/mani_ctrl"};
+std::string const CommonConfigs::MapDataTopic{"/map"};
+std::string const CommonConfigs::MapLoadingModeControllerNodeName{"map_loading_mode_controller_node"};
+std::string const CommonConfigs::MapLoadingRequestTopic{"map_saving_request"};
+std::string const CommonConfigs::MapLoadingResultTopic{"map_saving_result"};
+std::string const CommonConfigs::MappingModeControllerNodeName{"mapping_mode_controller_node"};
+
+Duration const& CommonConfigs::MaxTextSpeakingDuration() {
     static Duration value{10_s};
     return value;
 }
+
+std::string const CommonConfigs::MedicineDeliveryTaskRequestTopic{"medicine_delivery_task_request"};
+std::string const CommonConfigs::MedicineDeliveryTaskResultTopic{"medicine_delivery_task_result"};
+std::string const CommonConfigs::MedicineDetectionRequestTopic{"/wpb_home/behaviors"};
+std::string const CommonConfigs::MedicineDetectionResultTopic{"/wpb_home/objects_3d"};
+std::string const CommonConfigs::MedicineGraspRequestTopic{"/wpb_home/grab_action"};
+std::string const CommonConfigs::MedicineGraspResultTopic{"/wpb_home/grab_result"};
+std::size_t const CommonConfigs::MessageBufferSize{10};
+std::string const CommonConfigs::ModeSwitchNodeName{"mode_switch_node"};
+
+std::string const& CommonConfigs::PackagePath() {
+    static std::string value{ros::package::getPath("xiaohu_robot")};
+    return value;
+}
+
+std::string const CommonConfigs::ServiceModeControllerNodeName{"service_mode_controller_node"};
+std::string const CommonConfigs::SpeechRecognitionNodeName{"speech_recognition_node"};
+std::string const CommonConfigs::SpeechRecognitionRequestTopic{"speech_recognition_request"};
+std::string const CommonConfigs::SpeechRecognitionResultTopic{"speech_recognition_result"};
+std::string const CommonConfigs::TemperatureMeasurementNodeName{"temperature_measurement_node"};
+std::string const CommonConfigs::TemperatureMeasurementRequestTopic{"temperature_measurement_request"};
+std::string const CommonConfigs::TemperatureMeasurementResultTopic{"temperature_measurement_result"};
+std::string const CommonConfigs::TextToSpeechNodeName{"text_to_speech_node"};
+std::string const CommonConfigs::TextToSpeechRequestTopic{"text_to_speech_request"};
+std::string const CommonConfigs::TextToSpeechResultTopic{"text_to_speech_result"};
+std::string const CommonConfigs::VideoCallRequestTopic{"video_call_request"};
+std::string const CommonConfigs::VideoCallResultTopic{"viedo_call_result"};
+std::string const CommonConfigs::VelocityControlRequestTopic{"/cmd_vel"};
+std::string const CommonConfigs::XfyunApiLoginParams{"appid = f897d917"};
+std::string const CommonConfigs::XiaohuRobotNamespace{"xiaohu_robot"};
 }  // namespace Foundation
 }  // namespace xiaohu_robot

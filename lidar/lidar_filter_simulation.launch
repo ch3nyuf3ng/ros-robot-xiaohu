@@ -1,3 +1,0 @@
-<launch>
-    <node pkg="wpr_simulation" type="lidar_filter" name="lidar_filter" />
-</launch>

@@ -1,2 +1,0 @@
-# MappingTaskMessage.msg
-string taskId

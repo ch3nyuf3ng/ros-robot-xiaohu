@@ -76,8 +76,8 @@ struct OnlineTtsParams final {
 
 struct LocalAsrParams final {
     int const asrThreshold{50};
-    std::string const asrResourcePath{CommonConfigs::packagePath() + "/lib/common.jet"};
-    std::string const asrGrammarBuildPath{CommonConfigs::packagePath() + "/lib/grammar/"};
+    std::string const asrResourcePath{CommonConfigs::PackagePath() + "/lib/common.jet"};
+    std::string const asrGrammarBuildPath{CommonConfigs::PackagePath() + "/lib/grammar/"};
 };
 }  // namespace Params
 

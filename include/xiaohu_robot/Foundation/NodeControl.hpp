@@ -16,9 +16,9 @@ struct Runnable {
 };
 
 struct NodeBasicConfigs final {
-    std::string nodeNamespace{CommonConfigs::xiaohuRobotNamespace};
-    std::size_t messageBufferSize{CommonConfigs::messageBufferSize};
-    Frequency loopFrequency{CommonConfigs::loopFrequency()};
+    std::string nodeNamespace{CommonConfigs::XiaohuRobotNamespace};
+    std::size_t messageBufferSize{CommonConfigs::MessageBufferSize};
+    Frequency loopFrequency{CommonConfigs::LoopFrequency()};
 };
 
 struct NodeTiming final {

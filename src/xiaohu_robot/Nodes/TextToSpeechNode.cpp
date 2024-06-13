@@ -5,6 +5,8 @@
 #include "xfyun_mod/msp_errors.h"
 #include "xfyun_mod/qtts.h"
 #include "xiaohu_robot/Foundation/Audio.hpp"
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
+#include "xiaohu_robot/Foundation/Exceptions.hpp"
 #include "xiaohu_robot/Foundation/Filesystem.hpp"
 #include <chrono>
 #include <stdexcept>
@@ -13,11 +15,9 @@
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
     std::setlocale(LC_ALL, "zh_CN.utf8");
-
-    ros::init(argc, argv, "tts_node");
-    TextToSpeechNode textToSpeechNode{TextToSpeechNode::Configs{}};
+    ros::init(argc, argv, CommonConfigs::TextToSpeechNodeName);
+    TextToSpeechNode textToSpeechNode{{}};
     textToSpeechNode.run();
-
     return 0;
 }
 
@@ -37,7 +37,7 @@ TextToSpeechNode::TextToSpeechNode(TextToSpeechNode::Configs configs):
     configs{std::move(configs)} {
     int errorCode = MSPLogin(NULL, NULL, this->configs.loginParams.c_str());
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("合成音频账号登录失败");
+        printMessageThenThrowRuntimeError("合成音频账号登录失败");
     }
     std::cout << "语音合成节点已启动。" << std::endl;
 }
@@ -107,12 +107,12 @@ void TextToSpeechNode::onlineTextToSpeech(std::string text) {
     int errorCode{MSP_SUCCESS};
     sessionId = QTTSSessionBegin(configs.params.c_str(), &errorCode);
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("会话开始失败");
+        printMessageThenThrowRuntimeError("会话开始失败");
     }
 
     errorCode = QTTSTextPut(sessionId.c_str(), text.c_str(), text.length(), NULL);
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("上传文本失败");
+        printMessageThenThrowRuntimeError("上传文本失败");
     }
     BufferedFile audioFile(configs.audioFilePath.c_str(), "wb");
     audioFile.write(&wavePcmHeader, sizeof(wavePcmHeader));
@@ -129,7 +129,7 @@ void TextToSpeechNode::onlineTextToSpeech(std::string text) {
     } while (synthStatus != MSP_TTS_FLAG_DATA_END && errorCode == MSP_SUCCESS);
 
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("下载音频失败");
+        printMessageThenThrowRuntimeError("下载音频失败");
     } else {
         wavePcmHeader.chunkSize = wavePcmHeader.subChunk2Size + 36;
     }
@@ -139,7 +139,7 @@ void TextToSpeechNode::onlineTextToSpeech(std::string text) {
 
     errorCode = QTTSSessionEnd(sessionId.c_str(), "Normal");
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("会话结束失败");
+        printMessageThenThrowRuntimeError("会话结束失败");
     } else {
         sessionId.clear();
     }

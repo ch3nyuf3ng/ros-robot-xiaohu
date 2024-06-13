@@ -1,5 +1,0 @@
-<launch>
-    <node pkg="xiaohu_robot" type="map_service_node" name="map_service_node" required="true" output="screen" />
-    <node pkg="xiaohu_robot" type="temperature_measurement_node" name="temperature_measurement_node" required="true" output="screen" />
-    <node pkg="xiaohu_robot" type="task_controller_node" name="task_controller_node" required="true" output="screen" />
-</launch>

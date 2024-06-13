@@ -1,7 +1,7 @@
 #include "xiaohu_robot/Foundation/Filesystem.hpp"
+#include "xiaohu_robot/Foundation/Exceptions.hpp"
 #include <cstring>
 #include <fcntl.h>
-#include <stdexcept>
 #include <string>
 #include <unistd.h>
 #include <utility>
@@ -14,7 +14,7 @@ inline namespace Filesystem {
 BufferedFile::BufferedFile(char const* filename, char const* mode):
     filePointer{std::fopen(filename, mode)} {
     if (!filePointer) {
-        throw std::runtime_error("Failed to open file: "s + filename);
+        printMessageThenThrowRuntimeError("Failed to open file: "s + filename);
     }
 }
 
@@ -57,7 +57,9 @@ std::size_t BufferedFile::write(void const* datePtr, std::size_t dataSize, std::
 PosixFile::PosixFile(char const* filename, int flags):
     fileDescriptor{::open(filename, flags)} {
     if (fileDescriptor < 0) {
-        throw std::runtime_error("Failed to open file: " + std::string(filename) + " (" + std::strerror(errno) + ")");
+        printMessageThenThrowRuntimeError(
+            "Failed to open file: " + std::string(filename) + " (" + std::strerror(errno) + ")"
+        );
     }
 }
 
@@ -100,7 +102,7 @@ void PosixFile::close() {
 Directory::Directory(std::string const& path):
     directoryPointer{opendir(path.c_str())} {
     if (!directoryPointer) {
-        throw std::runtime_error("Failed to open directory: " + path);
+        printMessageThenThrowRuntimeError("Failed to open directory: " + path);
     }
 }
 

@@ -17,9 +17,9 @@ inline namespace Nodes {
 class SpeechRecognitionNode final: public Runnable {
 public:
     struct Configs final {
-        std::string speechRecognitionRequestTopic{CommonConfigs::speechRecognitionRequestTopic};
-        std::string speechRecognotionResultTopic{CommonConfigs::speechRecognitionResultTopic};
-        std::string xfyunApiLoginParams{CommonConfigs::xfyunApiLoginParams};
+        std::string speechRecognitionRequestTopic{CommonConfigs::SpeechRecognitionRequestTopic};
+        std::string speechRecognotionResultTopic{CommonConfigs::SpeechRecognitionResultTopic};
+        std::string xfyunApiLoginParams{CommonConfigs::XfyunApiLoginParams};
         std::string grammar{XunfeiApi::Grammar::yesOrNo};
         XunfeiApi::Params::LocalAsrParams asrParams{};
         NodeBasicConfigs nodeBasicConfigs{};

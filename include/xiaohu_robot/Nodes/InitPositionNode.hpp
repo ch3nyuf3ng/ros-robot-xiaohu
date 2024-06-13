@@ -12,9 +12,9 @@ inline namespace Nodes {
 class InitPositionNode final: public Runnable {
 public:
     struct Configs final {
-        std::string initPositionRequestTopic{CommonConfigs::initPositionRequestTopic};
-        std::string initPositionResultTopic{CommonConfigs::initPositionResultTopic};
-        std::string amclInitPositionRequestTopic{CommonConfigs::amclInitPositionRequestTopic};
+        std::string initPositionRequestTopic{CommonConfigs::InitPositionRequestTopic};
+        std::string initPositionResultTopic{CommonConfigs::InitPositionResultTopic};
+        std::string amclInitPositionRequestTopic{CommonConfigs::AmclInitPositionRequestTopic};
         NodeBasicConfigs nodeBasicConfigs{};
     };
 

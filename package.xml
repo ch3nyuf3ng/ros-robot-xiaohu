@@ -72,6 +72,7 @@
   <exec_depend>teb_local_planner</exec_depend>
   <exec_depend>tf</exec_depend>
   <exec_depend>wpb_home_behaviors</exec_depend>
+  <exec_depend>wpb_home_bringup</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

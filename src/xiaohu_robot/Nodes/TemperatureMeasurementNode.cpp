@@ -1,6 +1,7 @@
 #include "xiaohu_robot/Nodes/TemperatureMeasurementNode.hpp"
 #include "ros/console.h"
 #include "ros/init.h"
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
 #include "xiaohu_robot/Foundation/InfraredTemperatureSensor.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <chrono>
@@ -13,7 +14,7 @@
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
     std::setlocale(LC_ALL, "zh_CN.utf8");
-    ros::init(argc, argv, "temperature_measurement_node");
+    ros::init(argc, argv, CommonConfigs::TemperatureMeasurementNodeName);
     TemperatureMeasurementNode temperatureMeasurementNode{{}};
     temperatureMeasurementNode.run();
     return 0;
@@ -38,8 +39,8 @@ TemperatureMeasurementNode::TemperatureMeasurementNode(Configs configs):
         configs.temperatureMeasurementResultTopic, configs.nodeBasicConfigs.messageBufferSize
     )},
     configs{std::move(configs)} {
-    bool useRealValue;
-    if (nodeHandle.getParam("real_temperature", useRealValue) && useRealValue) {
+    bool useRealValue{false};
+    if (nodeHandle.getParam(configs.isRealParameter, useRealValue) && useRealValue) {
         ROS_INFO("使用真实温度。");
         try {
             infraredTemperatureSensor = std::make_unique<InfraredTemperatureSensorUart>();

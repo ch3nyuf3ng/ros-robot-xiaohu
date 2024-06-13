@@ -1,0 +1,10 @@
+<launch>
+    <include file="$(find xiaohu_robot)/launch/functions/object_detect.launch" />
+    <include file="$(find xiaohu_robot)/launch/functions/object_grab.launch" />
+    <node pkg="map_server" type="map_server" name="map_server" required="true" args="$(find xiaohu_robot)/maps/runtime/map.yaml" />
+    <node pkg="sound_play" type="soundplay_node.py" name="soundplay_node" />
+    <node pkg="xiaohu_robot" type="service_mode_controller_node" name="service_mode_controller_node" required="true" output="screen" />
+    <node pkg="xiaohu_robot" type="speech_recognition_node" name="speech_recognition_node" required="true" output="screen" />
+    <node pkg="xiaohu_robot" type="temperature_measurement_node" name="temperature_measurement_node" required="true" output="screen" />
+    <node pkg="xiaohu_robot" type="text_to_speech_node" name="text_to_speech_node" required="true" output="screen" />
+</launch>

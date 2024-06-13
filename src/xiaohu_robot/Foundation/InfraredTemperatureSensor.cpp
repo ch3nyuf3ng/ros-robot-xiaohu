@@ -1,6 +1,7 @@
 #include "xiaohu_robot/Foundation/InfraredTemperatureSensor.hpp"
 #include "serial/serial.h"
 #include "xiaohu_robot/Foundation/Debug.hpp"
+#include "xiaohu_robot/Foundation/Exceptions.hpp"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <algorithm>
@@ -36,14 +37,14 @@ InfraredTemperatureSensorUart::InfraredTemperatureSensorUart(std::string const& 
         serial::flowcontrol_none
     ) {
     if (!serialDevice.isOpen()) {
-        throw std::runtime_error("无法打开串口设备");
+        printMessageThenThrowRuntimeError("无法打开串口设备");
     }
 
     sendCommand(TemperatureTargetSettingCommand, {BodyTemperature});
     std::vector<std::uint8_t> responseArguments{readCommandResponseArguments(TemperatureTargetSettingCommand)};
     if (responseArguments.front() != 0) {
         serialDevice.close();
-        throw std::runtime_error("无法设置测温模式为测体温模式。可能设备不处于 UART 通讯模式中。");
+        printMessageThenThrowRuntimeError("无法设置测温模式为测体温模式。可能设备不处于 UART 通讯模式中。");
     }
     std::cout << "UART 测温传感器实例已构造。" << std::endl;
 }
@@ -60,11 +61,11 @@ InfraredTemperatureSensor::Data InfraredTemperatureSensorUart::measureTemperatur
     std::vector<std::uint8_t> responseArguments{readCommandResponseArguments(TemperatureMeasurementCommand)};
     if (responseArguments.size() != 5) {
         printContainer("Response args: ", responseArguments);
-        throw std::runtime_error("测温响应参数长度不匹配。");
+        printMessageThenThrowRuntimeError("测温响应参数长度不匹配。");
     }
     if (responseArguments[TemperatureTarget] != BodyTemperature) {
         printContainer("Response args: ", responseArguments);
-        throw std::runtime_error("测温目标类型不匹配。");
+        printMessageThenThrowRuntimeError("测温目标类型不匹配。");
     }
     Temperature bodyTemperature{
         static_cast<double>(
@@ -114,7 +115,7 @@ std::vector<std::uint8_t> InfraredTemperatureSensorUart::readCommandResponseArgu
         std::vector<std::uint8_t> actualResponseHeader(buffer.begin(), buffer.begin() + PacketHeader.size());
         printContainer("实际响应数据包包头: ", actualResponseHeader);
         printContainer("期待响应数据包包头: ", PacketHeader);
-        throw std::runtime_error("响应数据包包头不匹配。");
+        printMessageThenThrowRuntimeError("响应数据包包头不匹配。");
     }
     buffer.clear();
     serialDevice.read(buffer, 1);
@@ -131,7 +132,7 @@ std::vector<std::uint8_t> InfraredTemperatureSensorUart::readCommandResponseArgu
         std::cerr << "预期响应指令：";
         printElement(command);
         std::cerr << std::endl;
-        throw std::runtime_error("响应指令不匹配。");
+        printMessageThenThrowRuntimeError("响应指令不匹配。");
     }
     std::vector<std::uint8_t> responseArguments(buffer.begin() + 1, buffer.end() - PacketTail.size() - 1);
     std::uint8_t responseChecksum{buffer[1 + responseArguments.size()]};
@@ -147,7 +148,7 @@ std::vector<std::uint8_t> InfraredTemperatureSensorUart::readCommandResponseArgu
         printElement(expectedResponseChecksum);
         std::cerr << std::endl;
         printContainer("Response: ", buffer);
-        throw std::runtime_error{"响应数据包校验码检验失败。"};
+        printMessageThenThrowRuntimeError("响应数据包校验码检验失败。");
     }
     std::vector<std::uint8_t> responseTail(buffer.end() - PacketTail.size(), buffer.end());
     if (!std::equal(PacketTail.begin(), PacketTail.end(), responseTail.begin())) {
@@ -155,7 +156,7 @@ std::vector<std::uint8_t> InfraredTemperatureSensorUart::readCommandResponseArgu
         std::vector<std::uint8_t> actualResponseTail(buffer.end() - PacketTail.size(), buffer.end());
         printContainer("实际响应数据包包头: ", actualResponseTail);
         printContainer("期待响应数据包包头: ", PacketHeader);
-        throw std::runtime_error("响应数据包包尾不匹配。");
+        printMessageThenThrowRuntimeError("响应数据包包尾不匹配。");
     }
     return responseArguments;
 }
@@ -193,7 +194,7 @@ void InfraredTemperatureSensorI2c::findI2cDevice() {
             return;
         }
     }
-    throw std::runtime_error("未找到可用的 i2c 总线。");
+    printMessageThenThrowRuntimeError("未找到可用的 i2c 总线。");
 }
 
 void InfraredTemperatureSensorI2c::setMeasurementMode() {
@@ -207,7 +208,7 @@ InfraredTemperatureSensorI2c::Data InfraredTemperatureSensorI2c::measureTemperat
     std::vector<std::uint8_t> rawData(5);
     readData(rawData);
     if (rawData[ReadMode] != readBodyTemperatureMode) {
-        throw std::runtime_error("Unexpected measurement type");
+        printMessageThenThrowRuntimeError("Unexpected measurement type");
     }
 
     Temperature bodyTemperature{
@@ -223,13 +224,13 @@ InfraredTemperatureSensorI2c::Data InfraredTemperatureSensorI2c::measureTemperat
 
 void InfraredTemperatureSensorI2c::writeCommands(std::initializer_list<std::uint8_t> commands) {
     if (deviceFile.write(&commands, commands.size()) != commands.size()) {
-        throw std::runtime_error("Failed to write to the i2c bus");
+        printMessageThenThrowRuntimeError("Failed to write to the i2c bus");
     }
 }
 
 void InfraredTemperatureSensorI2c::readData(std::vector<std::uint8_t>& buffer) {
     if (deviceFile.read(buffer.data(), buffer.size()) != static_cast<ssize_t>(buffer.size())) {
-        throw std::runtime_error("Failed to read from the i2c bus");
+        printMessageThenThrowRuntimeError("Failed to read from the i2c bus");
     }
 }
 }  // namespace Foundation

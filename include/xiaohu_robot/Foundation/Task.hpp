@@ -12,13 +12,7 @@
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-enum struct TaskVersion {
-    Legacy,
-    New
-};
-
 enum struct TaskType {
-    Mapping,
     Inspection,
     MedicineDelivery
 };
@@ -35,7 +29,6 @@ TaskType toType(std::string);
 struct Task: public Printable {
     ~Task() = default;
     virtual TaskType getTaskType() const = 0;
-    virtual TaskVersion getTaskVersion() const = 0;
 };
 
 struct TaskResult {
@@ -72,22 +65,6 @@ struct TaskResultImplementation: public MessageConvertible<TaskResultMessageType
     }
 };
 
-struct MappingTask final: public Task, public MessageConvertible<MappingTaskRequestMessage> {
-    MappingTaskRequestMessage requestMessage;
-    std::string taskId;
-
-    MappingTask(MappingTaskRequestMessage::ConstPtr const& message);
-    std::string toString() const override;
-    TaskType getTaskType() const override;
-    TaskVersion getTaskVersion() const override;
-    MappingTaskRequestMessage toMessage() const override;
-
-    struct Result final: TaskResultImplementation<MappingTask, MappingTaskResultMessage> {
-        using TaskResultImplementation::TaskResultImplementation;
-        using TaskResultImplementation::toMessage;
-    };
-};
-
 struct InspectionTask final: public Task, public MessageConvertible<InspectionTaskRequestMessage> {
     InspectionTaskRequestMessage requestMessage;
     std::string taskId;
@@ -97,7 +74,6 @@ struct InspectionTask final: public Task, public MessageConvertible<InspectionTa
     InspectionTask(InspectionTaskRequestMessage::ConstPtr const& message);
     std::string toString() const override;
     TaskType getTaskType() const override;
-    TaskVersion getTaskVersion() const override;
     InspectionTaskRequestMessage toMessage() const override;
 
     struct Result final: public TaskResultImplementation<InspectionTask, InspectionTaskResultMessage> {
@@ -122,7 +98,6 @@ struct MedicineDeliveryTask final: public Task, public MessageConvertible<Medici
     MedicineDeliveryTask(MedicineDeliveryTaskRequestMessage::ConstPtr const& message);
     std::string toString() const override;
     TaskType getTaskType() const override;
-    TaskVersion getTaskVersion() const override;
     MedicineDeliveryTaskRequestMessage toMessage() const override;
 
     struct Result final: public TaskResultImplementation<MedicineDeliveryTask, MedicineDeliveryTaskResultMessage> {
@@ -134,26 +109,6 @@ struct MedicineDeliveryTask final: public Task, public MessageConvertible<Medici
     };
 };
 
-struct LegacyGeneralTask final: public Task, public MessageConvertible<LegacyGeneralTaskRequestMessage> {
-    LegacyGeneralTaskRequestMessage requestMessage;
-    TaskType type;
-    std::string taskId;
-    std::string pharmacy;
-    std::string patient;
-    std::string prescription;
-
-    LegacyGeneralTask(LegacyGeneralTaskRequestMessage::ConstPtr const&);
-
-    std::string toString() const override;
-    TaskType getTaskType() const override;
-    TaskVersion getTaskVersion() const override;
-    LegacyGeneralTaskRequestMessage toMessage() const override;
-
-    struct Result final: TaskResultImplementation<LegacyGeneralTask, LegacyGeneralTaskResultMessage> {
-        using TaskResultImplementation::TaskResultImplementation;
-        using TaskResultImplementation::toMessage;
-    };
-};
 }  // namespace Foundation
 }  // namespace xiaohu_robot
 

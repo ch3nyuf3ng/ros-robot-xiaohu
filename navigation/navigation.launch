@@ -1,7 +1,0 @@
-<launch>
-    <include file="$(find xiaohu_robot)/maps/load_map.launch">
-        <arg name="map_info" value="$(find xiaohu_robot)/maps/runtime/map.yaml" />
-    </include>
-    <include file="$(find xiaohu_robot)/navigation/amcl.launch" />
-    <include file="$(find xiaohu_robot)/navigation/move_base.launch"/>
-</launch>

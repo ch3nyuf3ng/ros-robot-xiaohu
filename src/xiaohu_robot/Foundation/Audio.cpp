@@ -1,4 +1,5 @@
 #include "xiaohu_robot/Foundation/Audio.hpp"
+#include "xiaohu_robot/Foundation/Exceptions.hpp"
 #include <alsa/pcm.h>
 #include <chrono>
 #include <cstddef>
@@ -6,7 +7,6 @@
 #include <iostream>
 #include <mutex>
 #include <ostream>
-#include <stdexcept>
 #include <thread>
 
 namespace xiaohu_robot {
@@ -59,7 +59,7 @@ void Recorder::start() {
         return;
     }
     if (snd_pcm_start(waveInputHandle) != NoError) {
-        throw std::runtime_error("录音机启动失败。");
+        printMessageThenThrowRuntimeError("录音机启动失败。");
     }
     state = State::Recording;
 }
@@ -73,7 +73,7 @@ void Recorder::stop() {
     {
         std::lock_guard<std::mutex> lock(waveInputHandleMutex);
         if (snd_pcm_drop(waveInputHandle) != NoError) {
-            throw std::runtime_error("录音机停止失败。");
+            printMessageThenThrowRuntimeError("录音机停止失败。");
         }
     }
     whenStopped();
@@ -91,7 +91,7 @@ void Recorder::checkThreadsException() {
 
 void Recorder::openDefaultInputDevice() {
     if (snd_pcm_open(&waveInputHandle, "default", SND_PCM_STREAM_CAPTURE, 0) != NoError) {
-        throw std::runtime_error("Cannot get default PCM device.");
+        printMessageThenThrowRuntimeError("Cannot get default PCM device.");
     }
 }
 
@@ -100,47 +100,47 @@ void Recorder::setHardwareParams() {
     snd_pcm_hw_params_alloca(&hardwareParams);
     std::lock_guard<std::mutex> lock(waveInputHandleMutex);
     if (snd_pcm_hw_params_any(waveInputHandle, hardwareParams) < NoError) {
-        throw std::runtime_error("Broken configuration for this PCM.");
+        printMessageThenThrowRuntimeError("Broken configuration for this PCM.");
     }
     if (snd_pcm_hw_params_set_access(waveInputHandle, hardwareParams, SND_PCM_ACCESS_RW_INTERLEAVED) < NoError) {
-        throw std::runtime_error("Access type not available.");
+        printMessageThenThrowRuntimeError("Access type not available.");
     }
     snd_pcm_format_t alsaFormat = snd_pcm_build_linear_format(
         waveFormat.wBitsPerSample, waveFormat.wBitsPerSample, waveFormat.wBitsPerSample == 8 ? 1 : 0, 0
     );
     if (alsaFormat == SND_PCM_FORMAT_UNKNOWN) {
-        throw std::runtime_error("Invalid Wave format.");
+        printMessageThenThrowRuntimeError("Invalid Wave format.");
     }
     if (snd_pcm_hw_params_set_format(waveInputHandle, hardwareParams, alsaFormat) < NoError) {
-        throw std::runtime_error("Sample format not available.");
+        printMessageThenThrowRuntimeError("Sample format not available.");
     }
     if (snd_pcm_hw_params_set_channels(waveInputHandle, hardwareParams, waveFormat.nChannels) < NoError) {
-        throw std::runtime_error("Channels count not available.");
+        printMessageThenThrowRuntimeError("Channels count not available.");
     }
     unsigned int actualSampleRate{waveFormat.nSamplesPerSec};
     if (snd_pcm_hw_params_set_rate_near(waveInputHandle, hardwareParams, &actualSampleRate, nullptr) < NoError) {
-        throw std::runtime_error("Set sample rate failed.");
+        printMessageThenThrowRuntimeError("Set sample rate failed.");
     }
     if (actualSampleRate != waveFormat.nSamplesPerSec) {
-        throw std::runtime_error("Sample rate mismatch.");
+        printMessageThenThrowRuntimeError("Sample rate mismatch.");
     }
     if (snd_pcm_hw_params_set_period_time_near(waveInputHandle, hardwareParams, &periodTime, nullptr) < NoError) {
-        throw std::runtime_error("Set period time failed.");
+        printMessageThenThrowRuntimeError("Set period time failed.");
     }
     if (snd_pcm_hw_params_set_buffer_time_near(waveInputHandle, hardwareParams, &bufferTime, nullptr) < NoError) {
-        throw std::runtime_error("Set buffer time failed.");
+        printMessageThenThrowRuntimeError("Set buffer time failed.");
     }
     if (snd_pcm_hw_params_get_period_size(hardwareParams, &periodFrames, nullptr) < NoError) {
-        throw std::runtime_error("Get period size failed.");
+        printMessageThenThrowRuntimeError("Get period size failed.");
     }
     if (snd_pcm_hw_params_get_buffer_size(hardwareParams, &bufferFrames) < NoError) {
-        throw std::runtime_error("Get buffer size failed.");
+        printMessageThenThrowRuntimeError("Get buffer size failed.");
     } else if (bufferFrames == periodFrames) {
-        throw std::runtime_error("Buffer frames shouldn't be equal to period frames.");
+        printMessageThenThrowRuntimeError("Buffer frames shouldn't be equal to period frames.");
     }
     bitsPerframe = waveFormat.wBitsPerSample;
     if (snd_pcm_hw_params(waveInputHandle, hardwareParams) < NoError) {
-        throw std::runtime_error("Install hardware parameters failed.");
+        printMessageThenThrowRuntimeError("Install hardware parameters failed.");
     }
 }
 
@@ -149,16 +149,16 @@ void Recorder::setSoftwareParams() {
     snd_pcm_sw_params_alloca(&softwareParams);
     std::lock_guard<std::mutex> lock(waveInputHandleMutex);
     if (snd_pcm_sw_params_current(waveInputHandle, softwareParams) < NoError) {
-        throw std::runtime_error("Get current software params failed.");
+        printMessageThenThrowRuntimeError("Get current software params failed.");
     }
     if (snd_pcm_sw_params_set_avail_min(waveInputHandle, softwareParams, periodFrames) < NoError) {
-        throw std::runtime_error("Set available minimum avail frames failed.");
+        printMessageThenThrowRuntimeError("Set available minimum avail frames failed.");
     }
     if (snd_pcm_sw_params_set_start_threshold(waveInputHandle, softwareParams, bufferFrames * 2) < NoError) {
-        throw std::runtime_error("Ser start threshold failed.");
+        printMessageThenThrowRuntimeError("Ser start threshold failed.");
     }
     if (snd_pcm_sw_params(waveInputHandle, softwareParams) < NoError) {
-        throw std::runtime_error("Unable to install software params.");
+        printMessageThenThrowRuntimeError("Unable to install software params.");
     }
 }
 
@@ -205,16 +205,16 @@ std::vector<char> Recorder::readPeriodData() {
 
 void Recorder::xrunRecovery(int errorCode) {
     if (errorCode == -EPIPE && snd_pcm_prepare(waveInputHandle) != NoError) {
-        throw std::runtime_error("Can't recover from overrun, prepare failed.");
+        printMessageThenThrowRuntimeError("Can't recover from overrun, prepare failed.");
     } else if (errorCode == -ESTRPIPE) {
         while ((errorCode = snd_pcm_resume(waveInputHandle)) == -EAGAIN) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (errorCode != NoError && snd_pcm_prepare(waveInputHandle) != NoError) {
-            throw std::runtime_error("Can't recover from overrun, prepare failed.");
+            printMessageThenThrowRuntimeError("Can't recover from overrun, prepare failed.");
         }
     } else {
-        throw std::runtime_error("Unknown PCM read error.");
+        printMessageThenThrowRuntimeError("Unknown PCM read error.");
     }
 }
 }  // namespace Audio

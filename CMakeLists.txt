@@ -61,10 +61,6 @@ add_message_files(
   FILES
     InspectionTaskRequest.msg
     InspectionTaskResult.msg
-    LegacyGeneralTaskRequest.msg
-    LegacyGeneralTaskResult.msg
-    MappingTaskRequest.msg
-    MappingTaskResult.msg
     MedicineDeliveryTaskRequest.msg
     MedicineDeliveryTaskResult.msg
     StatusAndDescription.msg
@@ -161,6 +157,7 @@ add_library(${PROJECT_NAME}_foundation
   src/${PROJECT_NAME}/Foundation/Audio.cpp
   src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
   src/${PROJECT_NAME}/Foundation/Coordinate.cpp
+  src/${PROJECT_NAME}/Foundation/Exceptions.cpp
   src/${PROJECT_NAME}/Foundation/Filesystem.cpp
   src/${PROJECT_NAME}/Foundation/InfraredTemperatureSensor.cpp
   src/${PROJECT_NAME}/Foundation/Measurement.cpp
@@ -181,163 +178,36 @@ target_link_libraries(${PROJECT_NAME}_foundation
   ${sound_libs}
 )
 
-add_executable(${PROJECT_NAME}_task_controller_node
-  src/${PROJECT_NAME}/Nodes/TaskControllerNode.cpp
-)
+macro(add_custom_node node_name node_source_code_filepath)
+  add_executable(${PROJECT_NAME}_${node_name}
+    ${node_source_code_filepath}
+  )
 
-add_dependencies(${PROJECT_NAME}_task_controller_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
+  add_dependencies(${PROJECT_NAME}_${node_name}
+    ${${PROJECT_NAME}_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+  )
 
-set_target_properties(${PROJECT_NAME}_task_controller_node
-  PROPERTIES
-    OUTPUT_NAME task_controller_node
-    PREFIX ""
-)
+  set_target_properties(${PROJECT_NAME}_${node_name}
+    PROPERTIES
+      OUTPUT_NAME ${node_name}
+      PREFIX ""
+  )
 
-target_link_libraries(${PROJECT_NAME}_task_controller_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
+  target_link_libraries(${PROJECT_NAME}_${node_name}
+    ${PROJECT_NAME}_foundation
+    ${catkin_LIBRARIES}
+  )
+endmacro()
 
-add_executable(${PROJECT_NAME}_init_position_node
-  src/${PROJECT_NAME}/Nodes/InitPositionNode.cpp
-)
-
-add_dependencies(${PROJECT_NAME}_init_position_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-set_target_properties(${PROJECT_NAME}_init_position_node
-  PROPERTIES
-    OUTPUT_NAME init_position_node
-    PREFIX ""
-)
-
-target_link_libraries(${PROJECT_NAME}_init_position_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-add_executable(${PROJECT_NAME}_tts_node
-  src/${PROJECT_NAME}/Nodes/TextToSpeechNode.cpp
-)
-
-add_dependencies(${PROJECT_NAME}_tts_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(${PROJECT_NAME}_tts_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-set_target_properties(${PROJECT_NAME}_tts_node
-  PROPERTIES
-    OUTPUT_NAME tts_node
-    PREFIX ""
-)
-
-add_executable(${PROJECT_NAME}_asr_node
-  src/${PROJECT_NAME}/Nodes/SpeechRecognitionNode.cpp
-)
-
-add_dependencies(${PROJECT_NAME}_asr_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(${PROJECT_NAME}_asr_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-set_target_properties(${PROJECT_NAME}_asr_node
-  PROPERTIES
-    OUTPUT_NAME asr_node
-    PREFIX ""
-)
-
-add_executable(${PROJECT_NAME}_temperature_measurement_node
-  src/${PROJECT_NAME}/Nodes/TemperatureMeasurementNode.cpp
-)
-
-add_dependencies(${PROJECT_NAME}_temperature_measurement_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(${PROJECT_NAME}_temperature_measurement_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-set_target_properties(${PROJECT_NAME}_temperature_measurement_node
-  PROPERTIES
-    OUTPUT_NAME temperature_measurement_node
-    PREFIX ""
-)
-
-add_executable(${PROJECT_NAME}_map_service_node
-  src/${PROJECT_NAME}/Nodes/MapServiceNode.cpp
-)
-
-add_dependencies(${PROJECT_NAME}_map_service_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(${PROJECT_NAME}_map_service_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
-
-set_target_properties(${PROJECT_NAME}_map_service_node
-  PROPERTIES
-    OUTPUT_NAME map_service_node
-    PREFIX ""
-)
-
-add_executable(${PROJECT_NAME}_core_sim_node
-  src/wpr_simulation/core_sim_node.cpp
-)
-
-set_target_properties(${PROJECT_NAME}_core_sim_node
-  PROPERTIES
-    OUTPUT_NAME core_sim_node
-    PREFIX ""
-)
-
-add_dependencies(${PROJECT_NAME}_core_sim_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(${PROJECT_NAME}_core_sim_node
-  ${catkin_LIBRARIES}
-)
-
-add_executable(${PROJECT_NAME}_keyboard_vel_ctrl
-  src/${PROJECT_NAME}/Nodes/keyboard_vel_ctrl.cpp
-)
-
-set_target_properties(${PROJECT_NAME}_keyboard_vel_ctrl
-  PROPERTIES
-    OUTPUT_NAME keyboard_vel_ctrl
-    PREFIX ""
-)
-
-add_dependencies(${PROJECT_NAME}_keyboard_vel_ctrl
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(${PROJECT_NAME}_keyboard_vel_ctrl
-  ${catkin_LIBRARIES}
-)
+add_custom_node(keyboard_vel_ctrl src/${PROJECT_NAME}/Nodes/keyboard_vel_ctrl.cpp)
+add_custom_node(map_loading_mode_controller_node src/${PROJECT_NAME}/Nodes/MapLoadingModeControllerNode.cpp)
+add_custom_node(mapping_mode_controller_node src/${PROJECT_NAME}/Nodes/MappingModeControllerNode.cpp)
+add_custom_node(mode_switch_node src/${PROJECT_NAME}/Nodes/ModeSwitchNode.cpp)
+add_custom_node(service_mode_controller_node src/${PROJECT_NAME}/Nodes/ServiceModeControllerNode.cpp)
+add_custom_node(speech_recognition_node src/${PROJECT_NAME}/Nodes/SpeechRecognitionNode.cpp)
+add_custom_node(temperature_measurement_node src/${PROJECT_NAME}/Nodes/TemperatureMeasurementNode.cpp)
+add_custom_node(text_to_speech_node src/${PROJECT_NAME}/Nodes/TextToSpeechNode.cpp)
 
 #############
 ## Install ##

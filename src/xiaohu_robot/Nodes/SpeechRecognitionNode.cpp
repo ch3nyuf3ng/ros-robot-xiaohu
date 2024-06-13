@@ -5,6 +5,8 @@
 #include "xfyun_mod/msp_errors.h"
 #include "xfyun_mod/msp_types.h"
 #include "xfyun_mod/qisr.h"
+#include "xiaohu_robot/Foundation/CommonConfigs.hpp"
+#include "xiaohu_robot/Foundation/Exceptions.hpp"
 #include <chrono>
 #include <clocale>
 #include <exception>
@@ -19,11 +21,9 @@
 int main(int argc, char* argv[]) {
     using namespace xiaohu_robot;
     std::setlocale(LC_ALL, "zh_CN.utf8");
-
-    ros::init(argc, argv, "asr_node");
-    SpeechRecognitionNode speechRecognitionNode{SpeechRecognitionNode::Configs{}};
+    ros::init(argc, argv, CommonConfigs::SpeechRecognitionNodeName);
+    SpeechRecognitionNode speechRecognitionNode{{}};
     speechRecognitionNode.run();
-
     return 0;
 }
 
@@ -43,7 +43,7 @@ SpeechRecognitionNode::SpeechRecognitionNode(SpeechRecognitionNode::Configs conf
     configs{std::move(configs)} {
     int errorCode = MSPLogin(NULL, NULL, this->configs.xfyunApiLoginParams.c_str());
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("讯飞云 API 登录失败");
+        printMessageThenThrowRuntimeError("讯飞云 API 登录失败");
     }
     try {
         uploadGrammar();
@@ -93,7 +93,7 @@ void SpeechRecognitionNode::endSession() {
         return;
     int endErrorCode{QISRSessionEnd(sessionId.c_str(), "")};
     if (endErrorCode != MSP_SUCCESS) {
-        throw std::runtime_error("QISR End Session failed.");
+        printMessageThenThrowRuntimeError("QISR End Session failed.");
     } else {
         std::cout << "语音识别会话结束。" << std::endl;
     }
@@ -129,7 +129,7 @@ int SpeechRecognitionNode::whenGrammarHasBuilt(int errorCode, char const* gramma
         grammarHandle->grammarId = grammarId;
         grammarHandle->hasBuilt = true;
     } else {
-        throw std::runtime_error("语法上传失败。");
+        printMessageThenThrowRuntimeError("语法上传失败。");
     }
     return 0;
 }
@@ -174,7 +174,7 @@ std::string SpeechRecognitionNode::speechRecognitionFromMicrophone(std::chrono::
     int errorCode{MSP_SUCCESS};
     sessionId = QISRSessionBegin(nullptr, asrSessionParams.c_str(), &errorCode);
     if (errorCode != MSP_SUCCESS) {
-        throw std::runtime_error("QISR Session begin failed.");
+        printMessageThenThrowRuntimeError("QISR Session begin failed.");
     } else {
         ROS_INFO("语音识别会话开始。");
     }
@@ -200,7 +200,7 @@ std::string SpeechRecognitionNode::speechRecognitionFromMicrophone(std::chrono::
         std::string finalResult(recorderContext.result, index + 6);
         return finalResult;
     } else {
-        throw std::runtime_error("没有检测到命令词。");
+        printMessageThenThrowRuntimeError("没有检测到命令词。");
     }
 }
 
@@ -217,7 +217,7 @@ Recorder::DataCallback SpeechRecognitionNode::whenPeriodDataIsReady(RecorderCont
             oss << "AudioWriteErrorCode: " << audioWriteErrorCode << "\n";
             oss << "EndPointStatus: " << endPointStatus << "\n";
             oss << "RecognitionStatus: " << recognitionStatus;
-            throw std::runtime_error(oss.str());
+            printMessageThenThrowRuntimeError(oss.str());
         }
         if (recognitionStatus != MSP_REC_STATUS_SUCCESS) {
             return;
@@ -228,7 +228,7 @@ Recorder::DataCallback SpeechRecognitionNode::whenPeriodDataIsReady(RecorderCont
             std::ostringstream oss;
             oss << "GetResultErrorCode: " << getResultErrorCode << "\n";
             oss << "RecognitionStatus: " << recognitionStatus;
-            throw std::runtime_error(oss.str());
+            printMessageThenThrowRuntimeError(oss.str());
         }
         if (resultPointer) {
             context.hasGotResult = true;
@@ -249,7 +249,7 @@ Recorder::EndCallback SpeechRecognitionNode::whenRecorderStopped(RecorderContext
             oss << "AudioWriteErrorCode: " << audioWriteErrorCode << "\n";
             oss << "EndPointStatus: " << endPointStatus << "\n";
             oss << "RecognitionStatus: " << recognitionStatus;
-            throw std::runtime_error(oss.str());
+            printMessageThenThrowRuntimeError(oss.str());
         }
         if (context.hasGotResult) {
             endSession();
@@ -264,7 +264,7 @@ Recorder::EndCallback SpeechRecognitionNode::whenRecorderStopped(RecorderContext
                 std::ostringstream oss;
                 oss << "GetResultErrorCode: " << getResultErrorCode << "\n";
                 oss << "RecognitionStatus: " << recognitionStatus;
-                throw std::runtime_error(oss.str());
+                printMessageThenThrowRuntimeError(oss.str());
             }
             if (resultPointer) {
                 context.result = resultPointer;

@@ -12,6 +12,8 @@ struct RuntimeErrorWithErrorCode: public std::runtime_error {
     RuntimeErrorWithErrorCode(std::string reason, int errorCode):
         std::runtime_error(reason + "，错误码：" + std::to_string(errorCode)) {}
 };
+
+[[noreturn]] void printMessageThenThrowRuntimeError(std::string const& message);
 }  // namespace Foundation
 }  // namespace xiaohu_robot
 
