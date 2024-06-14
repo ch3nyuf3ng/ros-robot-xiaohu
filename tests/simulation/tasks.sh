@@ -1,6 +1,6 @@
-# rostopic pub -1 /xiaohu_robot/init_position_request \
-# geometry_msgs/Pose \
-# '{position: {x: 0, y: 0, z: 0}, orientation: {x: 0, y: 0, z: 0, w: 1}}'
+rostopic pub -1 /xiaohu_robot/init_position_request \
+geometry_msgs/Pose \
+'{position: {x: 0, y: 0, z: 0}, orientation: {x: 0, y: 0, z: 0, w: 1}}'
 
 rostopic pub -1 /xiaohu_robot/inspection_task_request \
 xiaohu_robot/InspectionTaskRequest "{\

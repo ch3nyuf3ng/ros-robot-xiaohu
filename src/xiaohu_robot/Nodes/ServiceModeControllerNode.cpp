@@ -630,12 +630,6 @@ void ServiceModeControllerNode::confirmPatientRequest() {
 }
 
 void ServiceModeControllerNode::videoCommunicating() {
-    if (!textToSpeech.hasStarted) {
-        delegateTextToSpeech("语音通话暂未实现。");
-    } else if (textToSpeech.hasEnded) {
-        transferCurrentTaskStateTo(TaskState::HaveFinishedPreviousTask);
-        textToSpeech.reset();
-    }
     if (!videoCall.hasStarted) {
         delegateVideoCall();
     } else if (videoCall.hasEnded) {
