@@ -25,6 +25,7 @@ public:
         std::string clearCostmapsTopic{CommonConfigs::ClearCostmapsTopic};
         std::string currentTaskStateRequestTopic{CommonConfigs::CurrentTaskStateRequestTopic};
         std::string currentTaskStateResultTopic{CommonConfigs::CurrentTaskStateResultTopic};
+        std::string enableServiceModeResultTopic{CommonConfigs::EnableServiceModeResultTopic};
         std::string inspectionTaskRequestTopic{CommonConfigs::InspectionTaskRequestTopic};
         std::string inspectionTaskResultTopic{CommonConfigs::InspectionTaskResultTopic};
         std::string medicineDeliveryTaskRequestTopic{CommonConfigs::MedicineDeliveryTaskRequestTopic};
@@ -138,6 +139,8 @@ private:
 
     NodeHandle nodeHandle;
     NodeTiming nodeTiming;
+
+    Publisher const enableServiceModeResultPublisher;
 
     DelegationState initPosition;
     Coordinate baseStatePosition;

@@ -23,10 +23,6 @@
 #include "xiaohu_robot/Foundation/Measurement.hpp"
 #include "xiaohu_robot/InspectionTaskRequest.h"
 #include "xiaohu_robot/InspectionTaskResult.h"
-#include "xiaohu_robot/LegacyGeneralTaskRequest.h"
-#include "xiaohu_robot/LegacyGeneralTaskResult.h"
-#include "xiaohu_robot/MappingTaskRequest.h"
-#include "xiaohu_robot/MappingTaskResult.h"
 #include "xiaohu_robot/MedicineDeliveryTaskRequest.h"
 #include "xiaohu_robot/MedicineDeliveryTaskResult.h"
 #include "xiaohu_robot/StatusAndDescription.h"
@@ -46,15 +42,11 @@ using Float64Message = std_msgs::Float64;
 using Frequency = Measurement<UnitFrequency>;
 using GoalState = actionlib::SimpleClientGoalState;
 using InspectionTaskRequestMessage = InspectionTaskRequest;
-using LegacyGeneralTaskResultMessage = LegacyGeneralTaskResult;
-using LegacyGeneralTaskRequestMessage = LegacyGeneralTaskRequest;
 using Length = Measurement<UnitLength>;
 using LinearSpeed = Measurement<UnitSpeed>;
 using LoopRate = ros::Rate;
 using ManipulatorControlMessage = sensor_msgs::JointState;
 using MapDataMessage = nav_msgs::OccupancyGrid;
-using MappingTaskRequestMessage = MappingTaskRequest;
-using MappingTaskResultMessage = MappingTaskResult;
 using MedicineDeliveryTaskRequestMessage = MedicineDeliveryTaskRequest;
 using MedicineDeliveryTaskResultMessage = MedicineDeliveryTaskResult;
 using NavigationClient = actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>;

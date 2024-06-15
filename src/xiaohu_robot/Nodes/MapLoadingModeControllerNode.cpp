@@ -1,5 +1,6 @@
 #include "xiaohu_robot/Nodes/MapLoadingModeControllerNode.hpp"
 #include "ros/init.h"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
 #include <clocale>
 #include <cstdlib>
 
@@ -16,6 +17,10 @@ namespace xiaohu_robot {
 inline namespace Nodes {
 MapLoadingModeControllerNode::MapLoadingModeControllerNode(MapLoadingModeControllerNode::Configs configs):
     nodeHandle(configs.nodeBasicConfigs.nodeNamespace),
+    enableMapLoadingModeResultPublisher(nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.enableMapLoadingModeResultTopic,
+        configs.nodeBasicConfigs.messageBufferSize
+    )),
     mapLoadingRequestSubscriber(nodeHandle.subscribe<MapDataMessage>(
         configs.mapLoadingRequestTopic,
         configs.nodeBasicConfigs.messageBufferSize,
@@ -29,6 +34,9 @@ MapLoadingModeControllerNode::MapLoadingModeControllerNode(MapLoadingModeControl
         nodeHandle.advertise<MapDataMessage>(configs.mapDataTopic, configs.nodeBasicConfigs.messageBufferSize, true)
     ),
     configs(std::move(configs)) {
+    StatusAndDescriptionMessage result;
+    result.status = StatusAndDescriptionMessage::done;
+    enableMapLoadingModeResultPublisher.publish(result);
     std::cout << "地图加载器节点已启动。" << std::endl;
 }
 

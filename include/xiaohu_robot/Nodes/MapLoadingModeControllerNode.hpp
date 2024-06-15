@@ -12,6 +12,7 @@ inline namespace Nodes {
 class MapLoadingModeControllerNode final: public Runnable {
 public:
     struct Configs final {
+        std::string enableMapLoadingModeResultTopic{CommonConfigs::EnableMapLoadingModeResultTopic};
         std::string mapDataTopic{CommonConfigs::MapDataTopic};
         std::string mapLoadingRequestTopic{CommonConfigs::MapLoadingRequestTopic};
         std::string mapLoadingResultTopic{CommonConfigs::EnableMapLoadingModeResultTopic};
@@ -32,6 +33,7 @@ private:
     void whenReceivedMapLoadingRequest(MapDataMessage::ConstPtr const&);
 
     NodeHandle nodeHandle;
+    Publisher enableMapLoadingModeResultPublisher;
     Subscriber mapLoadingRequestSubscriber;
     Publisher mapLoadingResultPublisher;
     Publisher mapDataPublisher;

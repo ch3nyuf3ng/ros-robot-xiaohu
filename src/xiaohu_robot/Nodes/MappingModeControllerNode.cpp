@@ -25,12 +25,19 @@ inline namespace Nodes {
 MappingModeControllerNode::MappingModeControllerNode(Configs configs):
     nodeHandle{configs.nodeBasicConfigs.nodeNamespace},
     transformListener{},
+    enableMappingModeResultPublisher(nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.enableMappingModeResultTopic,
+        configs.nodeBasicConfigs.messageBufferSize
+    )),
     currentPositionResultPublisher{nodeHandle.advertise<geometry_msgs::Pose>("current_position_result", 10)},
     currentPositionRequestSubscriber{
         nodeHandle.subscribe("current_position_request", 10, &MappingModeControllerNode::whenReceivedCurrentPositionRequest, this)
     },
     getMapServiceClient{nodeHandle.serviceClient<nav_msgs::GetMap>(configs.gmappingGetMapTopic)},
     configs{std::move(configs)} {
+    StatusAndDescriptionMessage result;
+    result.status = StatusAndDescriptionMessage::done;
+    enableMappingModeResultPublisher.publish(result);
     std::cout << "建图模式已启动。" << std::endl;
 }
 

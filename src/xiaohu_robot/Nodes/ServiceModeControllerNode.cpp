@@ -30,6 +30,10 @@ inline namespace Nodes {
 ServiceModeControllerNode::ServiceModeControllerNode(Configs configs):
     nodeHandle(configs.nodeBasicConfig.nodeNamespace),
     nodeTiming{configs.nodeBasicConfig.loopFrequency},
+    enableServiceModeResultPublisher(nodeHandle.advertise<StatusAndDescriptionMessage>(
+        configs.enableServiceModeResultTopic,
+        configs.nodeBasicConfig.messageBufferSize
+    )),
     initPosition{},
     baseStatePosition{},
     initPositionRequestSubscriber{nodeHandle.subscribe<CoordinateMessage>(
@@ -152,8 +156,11 @@ ServiceModeControllerNode::ServiceModeControllerNode(Configs configs):
     waiting{},
     exceptionHandling{},
     configs{std::move(configs)} {
-    std::cout << "任务控制器已启动。" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    StatusAndDescriptionMessage result;
+    result.status = StatusAndDescriptionMessage::done;
+    enableServiceModeResultPublisher.publish(result);
+    std::cout << "任务控制器已启动。" << std::endl;
 }
 
 ServiceModeControllerNode::~ServiceModeControllerNode() {

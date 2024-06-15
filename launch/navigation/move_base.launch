@@ -6,7 +6,7 @@
         <rosparam file="$(find xiaohu_robot)/launch/navigation/params/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find xiaohu_robot)/launch/navigation/params/local_planner_params.yaml" command="load" />
         <param name="base_global_planner" value="global_planner/GlobalPlanner" />
-        <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+        <param name="base_local_planner" value="wpbh_local_planner/WpbhLocalPlanner" />
         <param name= "controller_frequency" value="10" type="double" />
     </node>
 </launch>

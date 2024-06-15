@@ -18,6 +18,7 @@ public:
         std::string baseLinkTopic{CommonConfigs::BaseLinkTopic};
         std::string currentPositionRequestTopic{CommonConfigs::CurrentPositionRequestTopic};
         std::string currentPositionResultTopic{CommonConfigs::CurrentPositionResultTopic};
+        std::string enableMappingModeResultTopic{CommonConfigs::EnableMappingModeResultTopic};
         std::string globalMapTopic{CommonConfigs::MapDataTopic};
         std::string gmappingGetMapTopic{CommonConfigs::GmappingGetMapTopic};
         NodeBasicConfigs nodeBasicConfigs{};
@@ -35,6 +36,7 @@ public:
 private:
     NodeHandle nodeHandle;
 
+    Publisher enableMappingModeResultPublisher;
     Subscriber currentPositionRequestSubscriber;
     Publisher currentPositionResultPublisher;
     Subscriber currentMapRequestSubscriber;
