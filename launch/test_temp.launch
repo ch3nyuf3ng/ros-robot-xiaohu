@@ -1,0 +1,7 @@
+<launch>
+    <arg name="is_real" default="true" />
+    <group ns="xiaohu_robot">
+        <param name="is_real" value="$(arg is_real)" />
+    </group>
+    <node pkg="xiaohu_robot" type="temperature_measurement_node" name="temperature_measurement_node" required="true" output="screen" />
+</launch>

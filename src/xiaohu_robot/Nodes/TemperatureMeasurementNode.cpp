@@ -40,7 +40,7 @@ TemperatureMeasurementNode::TemperatureMeasurementNode(Configs configs):
     )},
     configs{std::move(configs)} {
     bool useRealValue{false};
-    if (nodeHandle.getParam(configs.isRealParameter, useRealValue) && useRealValue) {
+    if (nodeHandle.getParam(this->configs.isRealParameter, useRealValue) && useRealValue) {
         ROS_INFO("使用真实温度。");
         try {
             infraredTemperatureSensor = std::make_unique<InfraredTemperatureSensorUart>();
