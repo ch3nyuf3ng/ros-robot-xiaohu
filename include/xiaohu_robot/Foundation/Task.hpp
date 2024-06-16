@@ -87,7 +87,7 @@ struct InspectionTask final: public Task, public MessageConvertible<InspectionTa
 };
 
 struct MedicineDeliveryTask final: public Task, public MessageConvertible<MedicineDeliveryTaskRequestMessage> {
-    MedicineDeliveryTaskRequestMessage const& requestMessage;
+    MedicineDeliveryTaskRequestMessage requestMessage;
     std::string taskId;
     std::string prescription;
     std::string pharmacyName;

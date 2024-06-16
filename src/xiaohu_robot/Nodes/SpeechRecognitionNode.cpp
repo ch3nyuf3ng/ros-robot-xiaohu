@@ -49,7 +49,7 @@ SpeechRecognitionNode::SpeechRecognitionNode(SpeechRecognitionNode::Configs conf
         uploadGrammar();
         std::ostringstream oss;
         oss << "engine_type = local, ";
-        oss << "asr_threshold = 10, ";
+        oss << "asr_threshold = " << configs.asrParams.asrThreshold << ", ";
         oss << "asr_res_path = fo|" << configs.asrParams.asrResourcePath << ", ";
         oss << "grm_build_path = " << configs.asrParams.asrGrammarBuildPath << ", ";
         oss << "local_grammar = " << grammarHandle.grammarId << ", ";

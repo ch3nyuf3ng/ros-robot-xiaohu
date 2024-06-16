@@ -74,7 +74,7 @@ std::string const CommonConfigs::TextToSpeechNodeName{"text_to_speech_node"};
 std::string const CommonConfigs::TextToSpeechRequestTopic{"text_to_speech_request"};
 std::string const CommonConfigs::TextToSpeechResultTopic{"text_to_speech_result"};
 std::string const CommonConfigs::VideoCallRequestTopic{"video_call_request"};
-std::string const CommonConfigs::VideoCallResultTopic{"viedo_call_result"};
+std::string const CommonConfigs::VideoCallResultTopic{"video_call_result"};
 std::string const CommonConfigs::VelocityControlRequestTopic{"/cmd_vel"};
 std::string const CommonConfigs::XfyunApiLoginParams{"appid = f897d917"};
 std::string const CommonConfigs::XiaohuRobotNamespace{"xiaohu_robot"};
