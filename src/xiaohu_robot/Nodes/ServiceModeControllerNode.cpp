@@ -34,6 +34,12 @@ ServiceModeControllerNode::ServiceModeControllerNode(Configs configs):
         configs.enableServiceModeResultTopic,
         configs.nodeBasicConfig.messageBufferSize
     )),
+    testRequestSubscriber{nodeHandle.subscribe<StringMessage>(
+        "test",
+        configs.nodeBasicConfig.messageBufferSize,
+        &ServiceModeControllerNode::whenReceivedTestRequest,
+        this
+    )},
     initPosition{},
     baseStatePosition{},
     initPositionRequestSubscriber{nodeHandle.subscribe<CoordinateMessage>(
@@ -923,6 +929,85 @@ void ServiceModeControllerNode::whenReceivedVideoCallResult(StatusAndDescription
     }
 }
 
+void ServiceModeControllerNode::whenReceivedTestRequest(StringMessage::ConstPtr const& message) {
+    std::string const& test{message->data};
+    if (test == "manipulator") {
+        delegateTextToSpeech("测试机械臂");
+        nodeTiming.addTimedTask(5_s, [this](){
+            delegateControlingRobotManipulator(ArmControl{1_m});
+            delegateTextToSpeech("抬高机械臂");
+        }, "抬高机械臂");
+        nodeTiming.addTimedTask(10_s, [this](){
+            delegateControlingRobotManipulator(GripperControl{20_cm});
+            delegateTextToSpeech("打开机械爪");
+        }, "打开机械爪");
+        nodeTiming.addTimedTask(15_s, [this](){
+            delegateControlingRobotManipulator(GripperControl{0_cm});
+            delegateTextToSpeech("关闭机械爪");
+        }, "关闭机械爪");
+        nodeTiming.addTimedTask(20_s, [this](){
+            delegateControlingRobotManipulator(ArmControl{0_m});
+            delegateTextToSpeech("收起机械臂");
+        }, "收起机械臂");
+        nodeTiming.addTimedTask(25_s, [this](){
+            delegateControlingRobotManipulator(MultiPartControl{
+                std::make_unique<ArmControl>(1_m), std::make_unique<GripperControl>(20_cm)
+            });
+            delegateTextToSpeech("抬高机械臂并打开机械爪");
+        }, "抬高机械臂并打开机械爪");
+        nodeTiming.addTimedTask(35_s, [this](){
+            delegateControlingRobotManipulator(MultiPartControl{
+                std::make_unique<ArmControl>(0_m), std::make_unique<GripperControl>(0_cm)
+            });
+            delegateTextToSpeech("关闭机械爪并收起机械臂");
+        }, "关闭机械爪并收起机械臂");
+        nodeTiming.addTimedTask(45_s, [this](){
+            delegateTextToSpeech("机械臂测试结束");
+            manipulatorControl.reset();
+            textToSpeech.reset();
+        }, "机械臂测试结束");
+        std::cout << "测试脚本设置完毕" << std::endl;
+    }
+    // else if (test == "grasp") {
+    //     delegateTextToSpeech("测试抓取");
+
+    //     nodeTiming.addTimedTask(5_s, [this](){
+    //         delegateObjectDetectionControl(ObjectDetectionControl::Start);
+    //     }, "开始物品检测");
+    //     nodeTiming.addTimedTask(8_s, [this](){
+    //         delegateObjectDetectionControl(ObjectDetectionControl::Stop);
+    //         if (medicineDetection.hasEnded) {
+    //             delegateObjectDetectionControl(ObjectDetectionControl::Stop);
+    //             delegateObjectGrasping(medicineDetection.medicinePosition);
+    //             delegateTextToSpeech("物品识别成功，开始抓取物品");
+    //             std::cout << "物品识别成功，开始抓取物品" << std::endl;
+    //         } else {
+    //             delegateTextToSpeech("物品识别失败");
+    //             medicineDetection.reset();
+    //             textToSpeech.reset();
+    //             return;
+    //         }
+    //     }, "停止物品检测");
+    // } 
+    else if (test == "retract_arm") {
+        delegateControlingRobotManipulator(MultiPartControl{
+            std::make_unique<ArmControl>(0_m), std::make_unique<GripperControl>(0_cm)});
+        manipulatorControl.reset();
+    } else if (test == "open_gripper") {
+        delegateControlingRobotManipulator(GripperControl{20_cm});
+        manipulatorControl.reset();
+    }
+    // else if (test == "grasp_done") {
+    //     delegateTextToSpeech("物品抓取成功");
+    //     medicineDetection.reset();
+    //     medicineGrasp.reset();
+    //     textToSpeech.reset();
+    // }
+    else {
+        std::cerr << "未知测试: " << test << std::endl;
+    }
+}
+
 void ServiceModeControllerNode::delegateVelocityControl(LinearSpeed forward) {
     velocityControl.start();
     ROS_DEBUG("将前进速度设置为 %s。", forward.toString().c_str());
@@ -943,7 +1028,7 @@ void ServiceModeControllerNode::delegateObjectDetectionControl(ObjectDetectionCo
                     medicineDetection.fail();
                 }
             },
-            "药品检测超时"
+            "检查药品检测是否超时"
         );
         break;
     case ObjectDetectionControl::Stop:

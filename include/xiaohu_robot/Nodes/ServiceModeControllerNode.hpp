@@ -142,6 +142,8 @@ private:
 
     Publisher const enableServiceModeResultPublisher;
 
+    Subscriber const testRequestSubscriber;
+
     DelegationState initPosition;
     Coordinate baseStatePosition;
     Subscriber const initPositionRequestSubscriber;
@@ -252,6 +254,7 @@ private:
     void whenReceivedSpeechRecognitionResult(StatusAndDescriptionMessage::ConstPtr const&);
     void whenReceivedTemperatureMeasurementResult(Float64Message::ConstPtr const&);
     void whenReceivedVideoCallResult(StatusAndDescriptionMessage::ConstPtr const&);
+    void whenReceivedTestRequest(StringMessage::ConstPtr const&);
 
     void delegateVelocityControl(LinearSpeed forward);
     void delegateObjectDetectionControl(ObjectDetectionControl target);
