@@ -1,16 +1,18 @@
+rostopic pub -1 /xiaohu_robot/enable_service_mode_request std_msgs/Empty "{}"
+
 rostopic pub -1 /xiaohu_robot/init_position_request \
 geometry_msgs/Pose \
 '{position: {x: 0, y: 0, z: 0}, orientation: {x: 0, y: 0, z: 0, w: 1}}'
 
-# rostopic pub -1 /xiaohu_robot/inspection_task_request \
-# xiaohu_robot/InspectionTaskRequest "{\
-#     taskId: '1', \
-#     patientName: '王明', \
-#     patientPosition: {\
-#         position: {x: 5.10567760616, y: -0.193560967495, z: 0.0}, \
-#         orientation: {x: 0.0, y: 0.0, z: -0.733005164224, w: 0.680223073132}\
-#     }\
-# }"
+rostopic pub -1 /xiaohu_robot/inspection_task_request \
+xiaohu_robot/InspectionTaskRequest "{\
+    taskId: '1', \
+    patientName: '王明', \
+    patientPosition: {\
+        position: {x: 5.10567760616, y: -0.193560967495, z: 0.0}, \
+        orientation: {x: 0.0, y: 0.0, z: -0.733005164224, w: 0.680223073132}\
+    }\
+}"
 
 rostopic pub -1 /xiaohu_robot/medicine_delivery_task_request \
 xiaohu_robot/MedicineDeliveryTaskRequest "{\
