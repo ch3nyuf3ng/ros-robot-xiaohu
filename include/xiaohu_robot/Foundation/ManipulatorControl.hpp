@@ -1,43 +1,71 @@
 #pragma once
 
-#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
 #ifndef XIAOHU_ROBOT_MANIPULATOR_CONTROL_HPP
 #define XIAOHU_ROBOT_MANIPULATOR_CONTROL_HPP
 
-#include "sensor_msgs/JointState.h"
+#include "xiaohu_robot/Foundation/CommonInterfaces.hpp"
+#include "xiaohu_robot/Foundation/Generics.hpp"
 #include "xiaohu_robot/Foundation/Measurement.hpp"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
+#include <memory>
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-struct ManipulatorControl: public Printable {
+struct ManipulatorControl: public Printable, public MessageConvertible<ManipulatorControlMessage> {
     virtual ~ManipulatorControl() = default;
 
-    virtual sensor_msgs::JointState toMessage() const = 0;
-    static sensor_msgs::JointState createMessage(size_t control_part_quantity);
+    static ManipulatorControlMessage createMessage(size_t control_part_quantity);
 };
 
-struct ArmControl final: public ManipulatorControl {
-    Measurement<UnitLength> const liftHeight;
-    Measurement<UnitSpeed> const liftSpeed;
+struct ManipulatorPartControl: public ManipulatorControl {
+    virtual ~ManipulatorPartControl() = default;
+};
 
-    ArmControl(Measurement<UnitLength> const& liftHeight, Measurement<UnitSpeed> const& liftSpeed = 50_cm_per_s);
+struct ArmControl final: public ManipulatorPartControl {
+    Length const liftHeight;
+    LinearSpeed const liftSpeed;
 
-    sensor_msgs::JointState toMessage() const override;
+    ArmControl(Length liftHeight, LinearSpeed liftSpeed = 50_cm_per_s);
+
+    ManipulatorControlMessage toMessage() const override;
     std::string toString() const override;
 };
 
-struct GripperControl final: public ManipulatorControl {
-    Measurement<UnitLength> const fingerGap;
-    Measurement<UnitAngularSpeed> const moveSpeed;
+struct GripperControl final: public ManipulatorPartControl {
+    Length const fingerGap;
+    AngularSpeed const moveSpeed;
 
-    GripperControl(
-        Measurement<UnitLength> const& fingerGap,
-        Measurement<UnitAngularSpeed> const& moveSpeed = 5_deg_per_s
-    );
+    GripperControl(Length fingerGap, AngularSpeed moveSpeed = 5_deg_per_s);
 
-    sensor_msgs::JointState toMessage() const override;
+    ManipulatorControlMessage toMessage() const override;
     std::string toString() const override;
 };
-}  // namespace foundation
+
+struct MultiPartControl final: public ManipulatorControl {
+    std::vector<std::unique_ptr<ManipulatorPartControl>> controls;
+
+    template<typename... Args> MultiPartControl(Args&&... args) {
+        static_assert(
+            AreBaseOfUniquePtr<ManipulatorPartControl, Args...>::value,
+            "All arguments must be derived from ManipulatorPartControl"
+        );
+        controls.reserve(sizeof...(args));
+        addControls(std::forward<Args>(args)...);
+    }
+
+    ManipulatorControlMessage toMessage() const override;
+    std::string toString() const override;
+
+private:
+    template<typename T> void addControls(T&& arg) {
+        controls.push_back(std::move(arg));
+    }
+
+    template<typename T, typename... Args> void addControls(T&& arg, Args&&... args) {
+        controls.push_back(std::move(arg));
+        addControls(std::forward<Args>(args)...);
+    }
+};
+}  // namespace Foundation
 }  // namespace xiaohu_robot
 #endif

@@ -1,0 +1,5 @@
+xiaohu_robot/InspectionTaskRequest taskRequest
+xiaohu_robot/StatusAndDescription statusAndDescription
+float64 patientTemperature
+bool measuredTemperature
+bool calledDoctor

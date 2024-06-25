@@ -7,17 +7,20 @@
 
 namespace xiaohu_robot {
 inline namespace Foundation {
-template<typename T> class Equatable {
-public:
+template<typename T> struct Equatable {
     virtual ~Equatable() = default;
     virtual bool equals(T const& object) const = 0;
 };
 
-class Printable {
-public:
+struct Printable {
     virtual ~Printable() = default;
     virtual std::string toString() const = 0;
 };
-}  // namespace foundation
+
+template<typename MessageType> struct MessageConvertible {
+    virtual ~MessageConvertible() = default;
+    virtual MessageType toMessage() const = 0;
+};
+}  // namespace Foundation
 }  // namespace xiaohu_robot
 #endif

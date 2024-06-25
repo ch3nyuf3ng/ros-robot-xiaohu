@@ -1,0 +1,13 @@
+<launch>
+    <arg name="using_joystick" default="false" />
+    <include file="$(find xiaohu_robot)/launch/phy/joystick.launch" if="$(arg using_joystick)"/>
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" required="true" output="screen" >
+        <param name="xmin" value="-10.0" />
+        <param name="ymin" value="-10.0" />
+        <param name="xmax" value="10.0" />
+        <param name="ymax" value="10.0" />
+        <param name="delta" value="0.05" />
+        <param name="base_frame" value="base_footprint" />
+    </node>
+    <node pkg="xiaohu_robot" type="mapping_mode_controller_node" name="mapping_mode_controller_node" required="true" output="screen" />
+</launch>

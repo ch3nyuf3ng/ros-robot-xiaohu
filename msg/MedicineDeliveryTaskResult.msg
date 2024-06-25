@@ -1,0 +1,4 @@
+xiaohu_robot/MedicineDeliveryTaskRequest taskRequest
+xiaohu_robot/StatusAndDescription statusAndDescription
+bool fetchedMedicine
+bool deliveredMedicine

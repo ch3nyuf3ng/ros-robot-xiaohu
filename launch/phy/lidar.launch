@@ -1,0 +1,15 @@
+<launch>
+    <arg name="is_real" /> 
+    <node pkg="wpb_home_bringup" type="wpb_home_lidar_filter" name="wpb_home_lidar_filter" if="$(arg is_real)" required="true">
+        <param name="pub_topic" value="/scan" />
+    </node>
+    <node pkg="wpr_simulation" type="lidar_filter" name="lidar_filter" unless="$(arg is_real)" required="true" />
+    <node name="rplidarNode" pkg="rplidar_ros" type="rplidarNode" if="$(arg is_real)" required="true">
+        <param name="serial_port" type="string" value="/dev/rplidar" />
+        <param name="serial_baudrate" type="int" value="115200" />
+        <param name="frame_id" type="string" value="laser" />
+        <param name="inverted" type="bool" value="false" />
+        <param name="angle_compensate" type="bool" value="true" />
+        <remap from="scan" to="scan_raw" />
+    </node>
+</launch>

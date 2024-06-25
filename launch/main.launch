@@ -1,0 +1,15 @@
+<launch>
+    <arg name="is_real" default="false" />
+    <group ns="xiaohu_robot">
+        <param name="is_real" value="$(arg is_real)" />
+    </group>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+    <include file="$(find xiaohu_robot)/launch/gazebo/gazebo.launch" unless="$(arg is_real)" />
+    <include file="$(find xiaohu_robot)/launch/phy/lidar.launch" pass_all_args="true" />
+    <include file="$(find xiaohu_robot)/launch/phy/manipulator.launch" pass_all_args="true" />
+    <include file="$(find xiaohu_robot)/launch/robot/robot_description.launch" />
+    <include file="$(find xiaohu_robot)/launch/rviz/rviz.launch" />
+    <include file="$(find xiaohu_robot)/launch/vision/kinect.launch" if="$(arg is_real)" />
+    <node pkg="tf2_web_republisher" type="tf2_web_republisher" name="tf2_web_republisher"/>
+    <node pkg="xiaohu_robot" type="mode_switch_node" name="mode_switch_node" required="true" output="screen" />
+</launch>

@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="wpb_home_behaviors" type="wpb_home_objects_3d" name="wpb_home_objects_3d">
+        <param name="topic" type="string" value="/kinect2/sd/points" />
+        <rosparam file="$(find xiaohu_robot)/launch/phy/params/compensation.yaml" command="load" />
+    </node>
+</launch>

@@ -1,18 +1,26 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(xiaohu_robot)
+project(xiaohu_robot C CXX)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  sensor_msgs
-  std_msgs
-  wpb_home_behaviors
+  actionlib
+  geometry_msgs
   message_generation
+  move_base_msgs
+  nav_msgs
+  roscpp
+  roslib
+  sensor_msgs
+  serial
+  sound_play
+  std_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -51,14 +59,18 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  MoveTaskMsg.msg
+    InspectionTaskRequest.msg
+    InspectionTaskResult.msg
+    MedicineDeliveryTaskRequest.msg
+    MedicineDeliveryTaskResult.msg
+    StatusAndDescription.msg
+    TaskStateControlRequest.msg
+    TaskStateControlResult.msg
 )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   Service1.srv
-#   Service2.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -72,6 +84,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
     std_msgs
+    geometry_msgs
 )
 
 ################################################
@@ -105,13 +118,20 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-# LIBRARIES serve_pkg
+# LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
-    roscpp
-    sensor_msgs
-    std_msgs
+    actionlib
+    geometry_msgs
     message_runtime
-    waterplus_map_tools
+    move_base_msgs
+    nav_msgs
+    roscpp
+    roslib
+    sensor_msgs
+    serial
+    sound_play
+    std_msgs
+    tf
     wpb_home_behaviors
 # DEPENDS system_lib
 )
@@ -127,65 +147,67 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
+link_directories(lib)
+
+set(sound_libs 
+  -lmsc -ldl -pthread -lm -lrt -lasound
+)
+
 add_library(${PROJECT_NAME}_foundation
+  src/${PROJECT_NAME}/Foundation/Audio.cpp
+  src/${PROJECT_NAME}/Foundation/CommonConfigs.cpp
+  src/${PROJECT_NAME}/Foundation/Coordinate.cpp
+  src/${PROJECT_NAME}/Foundation/Exceptions.cpp
+  src/${PROJECT_NAME}/Foundation/Filesystem.cpp
+  src/${PROJECT_NAME}/Foundation/InfraredTemperatureSensor.cpp
   src/${PROJECT_NAME}/Foundation/Measurement.cpp
   src/${PROJECT_NAME}/Foundation/ManipulatorControl.cpp
+  src/${PROJECT_NAME}/Foundation/NodeControl.cpp
+  src/${PROJECT_NAME}/Foundation/Task.cpp
+  src/${PROJECT_NAME}/Foundation/VelocityCommand.cpp
+  src/${PROJECT_NAME}/Foundation/Voice.cpp
 )
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_controller_node
-  src/${PROJECT_NAME}/Controller.cpp
-  src/${PROJECT_NAME}/ControllerNode.cpp
-)
-
-add_executable(${PROJECT_NAME}_move_tasks_publish_node
-  src/${PROJECT_NAME}/ObjectMoveTasksPubisherNode.cpp
-)
-
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-set_target_properties(${PROJECT_NAME}_controller_node
-  PROPERTIES
-    OUTPUT_NAME move_objects_node
-    PREFIX ""
-)
-set_target_properties(${PROJECT_NAME}_move_tasks_publish_node
-  PROPERTIES
-    OUTPUT_NAME move_tasks_publish_node
-    PREFIX ""
-)
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-add_dependencies(${PROJECT_NAME}_controller_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-)
-add_dependencies(${PROJECT_NAME}_move_tasks_publish_node
+add_dependencies(${PROJECT_NAME}_foundation
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
 
-## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_controller_node
-  ${PROJECT_NAME}_foundation
+target_link_libraries(${PROJECT_NAME}_foundation
   ${catkin_LIBRARIES}
+  ${sound_libs}
 )
 
-target_link_libraries(${PROJECT_NAME}_move_tasks_publish_node
-  ${PROJECT_NAME}_foundation
-  ${catkin_LIBRARIES}
-)
+macro(add_custom_node node_name node_source_code_filepath)
+  add_executable(${PROJECT_NAME}_${node_name}
+    ${node_source_code_filepath}
+  )
+
+  add_dependencies(${PROJECT_NAME}_${node_name}
+    ${${PROJECT_NAME}_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+  )
+
+  set_target_properties(${PROJECT_NAME}_${node_name}
+    PROPERTIES
+      OUTPUT_NAME ${node_name}
+      PREFIX ""
+  )
+
+  target_link_libraries(${PROJECT_NAME}_${node_name}
+    ${PROJECT_NAME}_foundation
+    ${catkin_LIBRARIES}
+  )
+endmacro()
+
+add_custom_node(keyboard_vel_ctrl src/${PROJECT_NAME}/Nodes/keyboard_vel_ctrl.cpp)
+add_custom_node(map_loading_mode_controller_node src/${PROJECT_NAME}/Nodes/MapLoadingModeControllerNode.cpp)
+add_custom_node(mapping_mode_controller_node src/${PROJECT_NAME}/Nodes/MappingModeControllerNode.cpp)
+add_custom_node(mode_switch_node src/${PROJECT_NAME}/Nodes/ModeSwitchNode.cpp)
+add_custom_node(service_mode_controller_node src/${PROJECT_NAME}/Nodes/ServiceModeControllerNode.cpp)
+add_custom_node(speech_recognition_node src/${PROJECT_NAME}/Nodes/SpeechRecognitionNode.cpp)
+add_custom_node(temperature_measurement_node src/${PROJECT_NAME}/Nodes/TemperatureMeasurementNode.cpp)
+add_custom_node(text_to_speech_node src/${PROJECT_NAME}/Nodes/TextToSpeechNode.cpp)
 
 #############
 ## Install ##

@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="xiaohu_robot" type="map_loading_mode_controller_node" name="map_loading_mode_controller_node" required="true" output="screen" />
+</launch>

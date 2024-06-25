@@ -1,0 +1,7 @@
+# MedicineDeliverySingleTaskMessage.msg
+string taskId
+string prescription
+string pharmacyName
+geometry_msgs/Pose pharmacyPosition
+string patientName
+geometry_msgs/Pose patientPosition

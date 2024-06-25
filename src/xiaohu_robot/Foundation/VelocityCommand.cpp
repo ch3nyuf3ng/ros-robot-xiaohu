@@ -1,0 +1,28 @@
+#include "xiaohu_robot/Foundation/VelocityCommand.hpp"
+#include "xiaohu_robot/Foundation/Typedefs.hpp"
+#include <sstream>
+
+namespace xiaohu_robot {
+inline namespace Foundation {
+VelocityCommand::VelocityCommand(LinearSpeed forwardBackwardAxis, LinearSpeed leftRightAxis, AngularSpeed rotationAxis):
+    forwardBackwardAxis{std::move(forwardBackwardAxis)},
+    leftRightAxis{std::move(leftRightAxis)},
+    rotationAxis{std::move(rotationAxis)} {}
+
+VelocityCommandMessage VelocityCommand::toMessage() const {
+    VelocityCommandMessage message;
+    message.linear.x = forwardBackwardAxis.getBaseUnitValue();
+    message.linear.y = leftRightAxis.getBaseUnitValue();
+    message.angular.z = rotationAxis.getBaseUnitValue();
+    return message;
+}
+
+std::string VelocityCommand::toString() const {
+    std::ostringstream oss;
+    oss << "LinearSpeed x: " << forwardBackwardAxis << ", ";
+    oss << "LinearSpeed y: " << leftRightAxis << ", ";
+    oss << "AngularSpeed z: " << rotationAxis;
+    return oss.str();
+}
+}  // namespace Foundation
+}  // namespace xiaohu_robot
